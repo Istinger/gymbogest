@@ -1,0 +1,52 @@
+# Variables de entorno y secretos
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Dependencias
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Prisma
+# (el schema.prisma SÍ se sube, pero no artefactos generados)
+backend/node_modules/.prisma/
+backend/generated/
+
+# Builds
+dist/
+build/
+frontend/build/
+frontend/dist/
+.next/
+
+# Testing
+coverage/
+
+# Base de datos local / dumps
+*.sql.bak
+database/*.dump
+backend/prisma/dev.db
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Docker (volúmenes locales si los materializas en disco)
+docker-data/
+
+# Dumps y respaldos de base de datos (datos sensibles)
+database/*.sql
+!database/triggers_auditoria.sql
+*.dump
+*.sql.bak

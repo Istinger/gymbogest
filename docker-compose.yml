@@ -1,0 +1,42 @@
+# GymboGest — entorno de desarrollo
+# BD de producción: PostgreSQL en la nube (ver diagrama de despliegue, Avance 6)
+#
+# Antes de usar: copiar .env.example a .env y completar los valores.
+#
+# Uso normal (BD en Docker, backend en tu PC con Node.js instalado):
+#   docker compose up -d db
+#
+# Uso "todo en Docker" (no necesitas Node.js instalado):
+#   docker compose --profile full up -d --build
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: ["${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    profiles: ["full"]        # solo se levanta con --profile full
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: ${BACKEND_PORT:-3001}
+    ports: ["${BACKEND_PORT:-3001}:3001"]
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - /app/node_modules      # evita pisar node_modules del contenedor
+
+volumes:
+  pgdata:

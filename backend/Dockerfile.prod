@@ -1,0 +1,22 @@
+# Imagen de producción para Azure Container Apps / App Service for Containers
+# Coincide con el diagrama de despliegue del Avance 6: «execution environment» en la nube.
+
+FROM node:20-alpine AS deps
+RUN apk add --no-cache openssl libssl3
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev                 # solo dependencias de producción
+
+FROM node:20-alpine AS runner
+RUN apk add --no-cache openssl libssl3
+WORKDIR /app
+ENV NODE_ENV=production
+RUN addgroup -S app && adduser -S app -G app   # no correr como root (seguridad)
+COPY --from=deps /app/node_modules ./node_modules
+COPY package*.json ./
+COPY prisma ./prisma
+COPY src ./src
+RUN npx prisma generate
+USER app
+EXPOSE 3001
+CMD ["node", "src/server.js"]

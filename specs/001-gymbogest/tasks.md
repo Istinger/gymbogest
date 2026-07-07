@@ -1,0 +1,47 @@
+# Tareas — GymboGest (orden de ejecución)
+
+Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar.
+
+## Fase 0 — Cimientos
+- [ ] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
+- [x] T02 · Semillas: 1 propietaria, 1 recepcionista, 2 educadoras, programas y 6 clases de ejemplo. (seed.js) — incluye 1 clase pre-llenada con 9 reservas para demostrar el rechazo del cupo n.º 10 en la defensa.
+- [x] T03 · Auth: login JWT + bcrypt + middleware de roles. (RNF-01) — src/middleware/auth.js, src/routes/auth.js
+- [x] T03b · Auditoría por TRIGGERS en tablas críticas. (RNF-07) — database/triggers_auditoria.sql. Aplicar UNA VEZ tras cada `migrate dev`/`migrate deploy`: `docker compose exec -T db psql -U gymbo -d gymbogest < database/triggers_auditoria.sql`
+- [x] T03c · Pruebas unitarias del servicio de reservas (Jest). — tests/reservaService.test.js
+- [ ] T03d · Pruebas de integración (Supertest + BD gymbogest_test). — tests/api.integration.test.js
+
+## Fase 1 — Núcleo de inscripciones (HF-1)
+- [ ] T04 · POST /api/familias — crea Familia+Tutor(Persona)+Nino en transacción. (RF-01)
+- [ ] T05 · Manejo de cédula duplicada → asociar niño a familia existente. (CU-01 exc. 6)
+- [ ] T06 · GET /api/familias, GET /api/familias/:id (ficha completa).
+
+## Fase 2 — Agendamiento (HF-2, HF-3) ⭐ el corazón
+- [ ] T07 · CRUD /api/clases con cupoMaximo=9. (RF-02)
+- [ ] T08 · POST /api/reservas con transacción: verifica cupo<9 + saldo paquete, descuenta. (RF-02/03)
+- [ ] T09 · PUT /api/reservas/:id/reagendar y /cancelar (libera cupo, devuelve saldo). (CU-02)
+- [ ] T10 · GET /api/agenda?fecha= — agenda del día con ocupación X/9. (Recepción)
+- [ ] T11 · Prueba de aceptación: intentar reserva n.º 10 → 409; concurrencia al último cupo.
+
+## Fase 3 — Operación diaria (HF-4, HF-5, HF-6)
+- [ ] T12 · POST /api/asistencias (solo niños con reserva en la clase). (RF-04)
+- [ ] T13 · POST/GET /api/progresos por niño; tutor solo ve a sus hijos. (RF-05)
+- [ ] T14 · CRUD /api/materiales + movimientos + GET /api/materiales/alertas. (RF-06)
+
+## Fase 4 — Valor gerencial (HF-7, HF-8)
+- [ ] T15 · GET /api/indicadores (activos, por semana, por canal, conversión prueba). (RF-07)
+- [ ] T16 · CRUD /api/corporativos (solicitudes On The Go). (RF-08)
+- [ ] T17 · Pagos: POST /api/pagos con mock Dátil → numeroComprobante.
+
+## Fase 5 — Frontend React
+- [ ] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.
+- [ ] T19 · Panel Recepción: inscripciones + agenda del día (wireframe 3).
+- [ ] T20 · Portal Tutor: reservar/reagendar/cancelar.
+- [ ] T21 · Panel Educadora: lista de clase, asistencia, progreso.
+- [ ] T22 · Panel Propietaria: tablero de indicadores + corporativos.
+
+## Fase 6 — Cierre para la defensa
+- [ ] T23 · pg_dump → database/respaldo_gymbogest.sql (rúbrica). Automatizado: scripts/backup.sh (+cron)
+- [ ] T24 · README con descripción, arquitectura e instalación (rúbrica).
+- [ ] T25 · Capturas de pantalla → tabla 1.8.3 del Avance 7.
+- [ ] T26 · Matriz de trazabilidad RF↔CU↔clase↔archivo↔pantalla (1 página para la defensa).
+- [ ] T27 · Ensayo de defensa: demo de 9→rechazo del 10.º, mostrar schema.prisma vs diagrama de clases.

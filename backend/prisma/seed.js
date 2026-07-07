@@ -1,0 +1,114 @@
+// ============================================================
+// prisma/seed.js — Datos de ejemplo (T02)
+// Crea: 1 propietaria, 1 recepcionista, 2 educadoras, y 6 clases
+// (una de ellas con 9 reservas activas, para probar el rechazo
+// del cupo n.º 10 en la demo de la defensa).
+// Ejecutar: npm run seed
+// ============================================================
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
+const prisma = new PrismaClient();
+
+async function crearUsuario({ nombres, cedula, correo, telefono, rolPersona, rol, fechaIngreso }) {
+  const persona = await prisma.persona.create({ data: { nombres, cedula, correo, telefono } });
+  if (rol !== 'TUTOR') {
+    await prisma.empleado.create({
+      data: { personaId: persona.id, rol: rolPersona, fechaIngreso: fechaIngreso || new Date() },
+    });
+  }
+  const passwordHash = await bcrypt.hash('semilla123', 10);
+  await prisma.usuario.create({ data: { correo, passwordHash, rol, personaId: persona.id } });
+  return persona;
+}
+
+async function main() {
+  console.log('Sembrando datos de ejemplo...');
+
+  // ---------- Usuarios internos (T02) ----------
+  await crearUsuario({
+    nombres: 'Karen Vaca', cedula: '1700000001', correo: 'propietaria@gymbo.ec',
+    telefono: '0990000001', rolPersona: 'propietaria', rol: 'PROPIETARIA',
+  });
+  await crearUsuario({
+    nombres: 'María Recepción', cedula: '1700000002', correo: 'recepcion@gymbo.ec',
+    telefono: '0990000002', rolPersona: 'recepcion', rol: 'RECEPCION',
+  });
+  const edu1 = await crearUsuario({
+    nombres: 'Ana Educadora', cedula: '1700000003', correo: 'educadora1@gymbo.ec',
+    telefono: '0990000003', rolPersona: 'educadora', rol: 'EDUCADORA',
+  });
+  const edu2 = await crearUsuario({
+    nombres: 'Lucía Educadora', cedula: '1700000004', correo: 'educadora2@gymbo.ec',
+    telefono: '0990000004', rolPersona: 'educadora', rol: 'EDUCADORA',
+  });
+  const empleado1 = await prisma.empleado.findUnique({ where: { personaId: edu1.id } });
+  const empleado2 = await prisma.empleado.findUnique({ where: { personaId: edu2.id } });
+
+  // ---------- 6 clases de ejemplo (RF-02) ----------
+  const programas = ['PLAY_LEARN', 'MUSIC', 'ART', 'SCHOOL_SKILLS', 'PLAYLAB', 'PLAY_LEARN'];
+  const clases = [];
+  for (let i = 0; i < 6; i++) {
+    const fecha = new Date();
+    fecha.setDate(fecha.getDate() + i);
+    fecha.setHours(10, 0, 0, 0);
+    const clase = await prisma.clase.create({
+      data: {
+        programa: programas[i],
+        fechaHora: fecha,
+        cupoMaximo: 9,
+        empleadoId: i % 2 === 0 ? empleado1.id : empleado2.id,
+      },
+    });
+    clases.push(clase);
+  }
+  console.log(`✔ ${clases.length} clases creadas.`);
+
+  // ---------- Familia + Niño + Paquete de ejemplo, para probar reservas ----------
+  const familiaDemo = await prisma.familia.create({
+    data: { canalOrigen: 'REFERIDO' },
+  });
+  const personaTutorDemo = await prisma.persona.create({
+    data: { nombres: 'Tutor Demo', cedula: '1700009999', correo: 'tutor.demo@mail.com', telefono: '0990009999' },
+  });
+  await prisma.tutor.create({
+    data: { personaId: personaTutorDemo.id, parentesco: 'madre', familiaId: familiaDemo.id },
+  });
+  const paqueteDemo = await prisma.paquete.create({
+    data: { tipo: 'mensual', clasesPorSemana: 3, saldoClases: 12, familiaId: familiaDemo.id },
+  });
+
+  // ---------- Escenario clave para la demo: LLENAR la clase[0] con 9 niños ----------
+  // Así, en la defensa, intentar reservar un 10.º niño demuestra el rechazo por cupo (CU-02 exc.3)
+  const claseLlena = clases[0];
+  for (let i = 0; i < 9; i++) {
+    const fam = await prisma.familia.create({ data: { canalOrigen: 'REDES' } });
+    const nino = await prisma.nino.create({
+      data: { nombres: `Niño Demo ${i + 1}`, fechaNacimiento: new Date('2022-01-01'), familiaId: fam.id },
+    });
+    const paq = await prisma.paquete.create({
+      data: { tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, familiaId: fam.id },
+    });
+    await prisma.reserva.create({
+      data: { ninoId: nino.id, claseId: claseLlena.id, paqueteId: paq.id, estado: 'ACTIVA' },
+    });
+  }
+  console.log(`✔ Clase "${claseLlena.programa}" (id ${claseLlena.id}) llenada con 9 reservas`
+    + ` — úsala para demostrar el rechazo del cupo n.º 10.`);
+
+  // Un niño de la familia demo, SIN reservar aún (para probar el flujo normal de reserva)
+  const ninoDemo = await prisma.nino.create({
+    data: { nombres: 'Niño Prueba Libre', fechaNacimiento: new Date('2023-05-10'), familiaId: familiaDemo.id },
+  });
+
+  console.log('\n=== Resumen para pruebas ===');
+  console.log('Login (todas las cuentas): password = semilla123');
+  console.log('  propietaria@gymbo.ec | recepcion@gymbo.ec | educadora1@gymbo.ec | educadora2@gymbo.ec');
+  console.log(`Clase LLENA (probar rechazo de cupo):  claseId = ${claseLlena.id}`);
+  console.log(`Niño sin reservar (probar reserva OK): ninoId = ${ninoDemo.id}, paqueteId = ${paqueteDemo.id}`);
+  console.log(`Otra clase con cupo libre: claseId = ${clases[1].id}`);
+  console.log('============================\n');
+}
+
+main()
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(async () => { await prisma.$disconnect(); });

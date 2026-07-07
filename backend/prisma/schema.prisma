@@ -1,0 +1,259 @@
+// ============================================================
+// GymboGest — schema.prisma
+// TRAZABILIDAD: este archivo implementa 1:1 el DIAGRAMA DE
+// CLASES del Avance 6. Nombres de modelos = nombres de clases.
+//   Herencia   Persona → Tutor, Empleado  ⇒ tabla padre + 1:1
+//   Composición Familia◆Nino, Paquete◆Reserva ⇒ onDelete: Cascade
+//   Agregación  Clase◇MaterialDidactico  ⇒ tabla intermedia sin cascada
+// ============================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Autenticación (RNF-01, LOPDP) ----------
+enum Rol {
+  PROPIETARIA
+  RECEPCION
+  EDUCADORA
+  TUTOR
+}
+
+model Usuario {
+  id           Int      @id @default(autoincrement())
+  correo       String   @unique
+  passwordHash String
+  rol          Rol
+  persona      Persona? @relation(fields: [personaId], references: [id])
+  personaId    Int?     @unique
+  creadoEn     DateTime @default(now())
+  auditorias   Auditoria[]
+}
+
+// ---------- Auditoría (RNF-07) ----------
+// Poblada por TRIGGERS de PostgreSQL (database/triggers_auditoria.sql):
+// cada INSERT/UPDATE/DELETE en tablas críticas queda registrado con el
+// usuario de la sesión (SET LOCAL app.usuario_id). Refuerza la LOPDP.
+model Auditoria {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  accion    String   // INSERT, UPDATE, DELETE
+  entidad   String   // tabla afectada
+  entidadId Int?
+  detalle   Json?    // fila anterior / nueva
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  usuarioId Int?
+}
+
+// ---------- Clase PADRE (herencia) ----------
+model Persona {
+  id       Int    @id @default(autoincrement())
+  nombres  String
+  cedula   String @unique // CU-01 excepción 6: no duplicar tutores
+  telefono String
+  correo   String
+
+  // HIJAS (table-per-type)
+  tutor    Tutor?
+  empleado Empleado?
+  usuario  Usuario?
+}
+
+// ---------- Clases HIJAS ----------
+model Tutor {
+  id         Int     @id @default(autoincrement())
+  persona    Persona @relation(fields: [personaId], references: [id])
+  personaId  Int     @unique
+  parentesco String  // madre, padre, abuelo/a...
+
+  familia    Familia @relation("inscribe", fields: [familiaId], references: [id])
+  familiaId  Int
+}
+
+model Empleado {
+  id           Int      @id @default(autoincrement())
+  persona      Persona  @relation(fields: [personaId], references: [id])
+  personaId    Int      @unique
+  rol          String   // educadora, recepcion, propietaria
+  fechaIngreso DateTime
+
+  clases       Clase[]  @relation("imparte")
+  eventos      EventoCorporativo[]
+}
+
+// ---------- Dominio ----------
+enum CanalOrigen {
+  REDES
+  PEDIATRA_ALIADO
+  EMPRESA
+  REFERIDO
+}
+
+model Familia {
+  id            Int         @id @default(autoincrement())
+  codigo        String      @unique @default(cuid())
+  canalOrigen   CanalOrigen // RF-01: mide la estrategia MAX-MAX
+  fechaRegistro DateTime    @default(now())
+
+  tutores  Tutor[]  @relation("inscribe")   // 1 — 1..*
+  ninos    Nino[]   @relation("contiene")   // COMPOSICIÓN ◆
+  paquetes Paquete[] @relation("contrata")  // 1 — 1..*
+  pagos    Pago[]
+}
+
+model Nino {
+  id               Int      @id @default(autoincrement())
+  nombres          String
+  fechaNacimiento  DateTime
+  observacionSalud String?
+
+  // COMPOSICIÓN: si se elimina la Familia, se eliminan sus Niños
+  familia   Familia @relation("contiene", fields: [familiaId], references: [id], onDelete: Cascade)
+  familiaId Int
+
+  reservas    Reserva[]    @relation("realiza")
+  asistencias Asistencia[] @relation("registra")
+  progresos   Progreso[]
+}
+
+model Paquete {
+  id              Int     @id @default(autoincrement())
+  tipo            String  // mensual, trimestral...
+  clasesPorSemana Int     // 1 a 7 (entrevista)
+  saldoClases     Int
+
+  familia   Familia @relation("contrata", fields: [familiaId], references: [id])
+  familiaId Int
+
+  // COMPOSICIÓN: si se elimina el Paquete, se eliminan sus Reservas
+  reservas Reserva[] @relation("agrupa")
+}
+
+enum Programa {
+  PLAY_LEARN
+  MUSIC
+  ART
+  SCHOOL_SKILLS
+  PLAYLAB
+}
+
+model Clase {
+  id         Int      @id @default(autoincrement())
+  programa   Programa
+  fechaHora  DateTime
+  cupoMaximo Int      @default(9) // RF-02: regla de la entrevista
+
+  empleado   Empleado @relation("imparte", fields: [empleadoId], references: [id])
+  empleadoId Int
+
+  reservas    Reserva[]      @relation("correspondeA")
+  asistencias Asistencia[]   @relation("en")
+  materiales  ClaseMaterial[] // AGREGACIÓN ◇ vía tabla intermedia
+}
+
+enum EstadoReserva {
+  ACTIVA
+  REAGENDADA
+  CANCELADA
+}
+
+model Reserva {
+  id     Int           @id @default(autoincrement())
+  fecha  DateTime      @default(now())
+  estado EstadoReserva @default(ACTIVA)
+
+  nino   Nino @relation("realiza", fields: [ninoId], references: [id])
+  ninoId Int
+
+  clase   Clase @relation("correspondeA", fields: [claseId], references: [id])
+  claseId Int
+
+  // COMPOSICIÓN con Paquete
+  paquete   Paquete @relation("agrupa", fields: [paqueteId], references: [id], onDelete: Cascade)
+  paqueteId Int
+
+  @@unique([ninoId, claseId]) // un niño no reserva dos veces la misma clase
+}
+
+enum EstadoAsistencia {
+  ASISTIO
+  FALTO
+  CLASE_PRUEBA
+}
+
+model Asistencia {
+  id     Int              @id @default(autoincrement())
+  fecha  DateTime         @default(now())
+  estado EstadoAsistencia
+
+  nino    Nino  @relation("registra", fields: [ninoId], references: [id])
+  ninoId  Int
+  clase   Clase @relation("en", fields: [claseId], references: [id])
+  claseId Int
+}
+
+model Progreso {
+  id          Int      @id @default(autoincrement())
+  fecha       DateTime @default(now())
+  area        String   // motor, cognitivo, social, emocional
+  observacion String
+
+  nino   Nino @relation(fields: [ninoId], references: [id])
+  ninoId Int
+}
+
+model MaterialDidactico {
+  id          Int    @id @default(autoincrement())
+  nombre      String
+  stock       Int
+  stockMinimo Int
+
+  clases ClaseMaterial[] // AGREGACIÓN: sobrevive aunque la clase se borre
+}
+
+// Tabla intermedia de la AGREGACIÓN Clase◇MaterialDidactico
+model ClaseMaterial {
+  clase      Clase             @relation(fields: [claseId], references: [id], onDelete: Cascade)
+  claseId    Int
+  material   MaterialDidactico @relation(fields: [materialId], references: [id]) // SIN cascada
+  materialId Int
+  cantidad   Int               @default(1)
+
+  @@id([claseId, materialId])
+}
+
+// ---------- Pagos (mock Dátil) y corporativo ----------
+model Pago {
+  id                Int      @id @default(autoincrement())
+  monto             Decimal  @db.Decimal(10, 2)
+  fecha             DateTime @default(now())
+  numeroComprobante String   // generado por el mock de Dátil
+
+  familia   Familia @relation(fields: [familiaId], references: [id])
+  familiaId Int
+}
+
+enum EstadoEvento {
+  SOLICITADO
+  CONFIRMADO
+  EJECUTADO
+  CANCELADO
+}
+
+model EventoCorporativo {
+  id         Int          @id @default(autoincrement())
+  empresa    String
+  contacto   String
+  fecha      DateTime
+  numNinos   Int
+  estado     EstadoEvento @default(SOLICITADO)
+
+  educadora   Empleado? @relation(fields: [educadoraId], references: [id])
+  educadoraId Int?
+}
