@@ -16,11 +16,11 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T06 · GET /api/familias, GET /api/familias/:id (ficha completa).
 
 ## Fase 2 — Agendamiento (HF-2, HF-3) ⭐ el corazón
-- [ ] T07 · CRUD /api/clases con cupoMaximo=9. (RF-02)
-- [ ] T08 · POST /api/reservas con transacción: verifica cupo<9 + saldo paquete, descuenta. (RF-02/03)
-- [ ] T09 · PUT /api/reservas/:id/reagendar y /cancelar (libera cupo, devuelve saldo). (CU-02)
-- [ ] T10 · GET /api/agenda?fecha= — agenda del día con ocupación X/9. (Recepción)
-- [ ] T11 · Prueba de aceptación: intentar reserva n.º 10 → 409; concurrencia al último cupo.
+- [x] T07 · CRUD /api/clases con cupoMaximo=9. (RF-02) — services/claseService.js + routes/clases.js
+- [x] T08 · POST /api/reservas con transacción: verifica cupo<9 + saldo paquete, descuenta. (RF-02/03)
+- [x] T09 · PUT /api/reservas/:id/reagendar y /cancelar (libera cupo, devuelve saldo). (CU-02) — sin doble descuento del paquete al reagendar
+- [x] T10 · GET /api/agenda?fecha= — agenda del día con ocupación X/9. (Recepción) — services/agendaService.js + routes/agenda.js
+- [x] T11 · Prueba de aceptación: intentar reserva n.º 10 → 409 (probado). Concurrencia: pendiente de prueba de carga real (Fase 6).
 
 ## Fase 3 — Operación diaria (HF-4, HF-5, HF-6)
 - [ ] T12 · POST /api/asistencias (solo niños con reserva en la clase). (RF-04)

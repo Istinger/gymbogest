@@ -11,7 +11,7 @@
 const { crearReservaService, CupoLlenoError, SinSaldoError } =
   require('../src/services/reservaService');
 
-function crearPrismaFalso({ ocupados, saldoClases }) {
+function crearPrismaFalso({ ocupados, saldoClases, reservaAnterior }) {
   const tx = {
     $executeRawUnsafe: jest.fn(),
     $queryRaw: jest.fn().mockResolvedValue([{ id: 10, cupoMaximo: 9 }]),
@@ -19,6 +19,7 @@ function crearPrismaFalso({ ocupados, saldoClases }) {
       count: jest.fn().mockResolvedValue(ocupados),
       create: jest.fn().mockResolvedValue({ id: 99, estado: 'ACTIVA' }),
       update: jest.fn().mockResolvedValue({ id: 1, estado: 'CANCELADA', paqueteId: 5 }),
+      findUnique: jest.fn().mockResolvedValue(reservaAnterior),
     },
     paquete: {
       findUnique: jest.fn().mockResolvedValue({ id: 5, saldoClases }),
@@ -75,5 +76,37 @@ describe('CU-02: cancelar reserva', () => {
       where: { id: 5 },
       data: { saldoClases: { increment: 1 } },
     });
+  });
+});
+
+describe('T09 / CU-02: reagendar reserva', () => {
+  const anterior = { id: 1, ninoId: 3, claseId: 10, paqueteId: 5, estado: 'ACTIVA' };
+
+  test('libera la clase anterior y crea la nueva SIN doble descuento del paquete', async () => {
+    const { prisma, tx } = crearPrismaFalso({ ocupados: 4, saldoClases: 3, reservaAnterior: anterior });
+    const servicio = crearReservaService(prisma);
+    await servicio.reagendarReserva(1, 20, 7);
+
+    expect(tx.reserva.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { estado: 'REAGENDADA' } });
+    expect(tx.reserva.create).toHaveBeenCalledWith({
+      data: { ninoId: 3, claseId: 20, paqueteId: 5, estado: 'ACTIVA' },
+    });
+    // clave del criterio de aceptación: NO se toca el saldo del paquete
+    expect(tx.paquete.update).not.toHaveBeenCalled();
+  });
+
+  test('rechaza reagendar a una clase destino llena', async () => {
+    const { prisma } = crearPrismaFalso({ ocupados: 9, saldoClases: 3, reservaAnterior: anterior });
+    const servicio = crearReservaService(prisma);
+    await expect(servicio.reagendarReserva(1, 20, 7)).rejects.toThrow(CupoLlenoError);
+  });
+
+  test('rechaza si la reserva original ya no está activa', async () => {
+    const { prisma } = crearPrismaFalso({
+      ocupados: 2, saldoClases: 3,
+      reservaAnterior: { ...anterior, estado: 'CANCELADA' },
+    });
+    const servicio = crearReservaService(prisma);
+    await expect(servicio.reagendarReserva(1, 20, 7)).rejects.toThrow();
   });
 });

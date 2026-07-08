@@ -19,6 +19,18 @@ router.post('/', verificarToken, async (req, res) => {
   }
 });
 
+// PUT /api/reservas/:id/reagendar — T09 (CU-02: libera cupo anterior, sin doble descuento)
+router.put('/:id/reagendar', verificarToken, async (req, res) => {
+  try {
+    const nueva = await servicio.reagendarReserva(
+      Number(req.params.id), req.body.nuevaClaseId, req.usuario.id);
+    res.json(nueva);
+  } catch (e) {
+    if (e instanceof CupoLlenoError) return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // PUT /api/reservas/:id/cancelar — CU-02: libera cupo y devuelve saldo
 router.put('/:id/cancelar', verificarToken, async (req, res) => {
   try { res.json(await servicio.cancelarReserva(Number(req.params.id), req.usuario.id)); }

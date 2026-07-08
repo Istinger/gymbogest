@@ -74,7 +74,50 @@ function crearReservaService(prisma) {
     });
   }
 
-  return { reservarClase, cancelarReserva };
+  // T09 — Reagendar: libera el cupo de la clase anterior y toma el nuevo,
+  // SIN doble descuento del paquete (criterio de aceptación HF-3).
+  // Implementa el mismo control de cupo/saldo que reservarClase.
+  async function reagendarReserva(reservaId, nuevaClaseId, usuarioId) {
+    return prisma.$transaction(async (tx) => {
+      if (usuarioId) {
+        await tx.$executeRawUnsafe(`SET LOCAL app.usuario_id = '${Number(usuarioId)}'`);
+      }
+
+      const anterior = await tx.reserva.findUnique({ where: { id: reservaId } });
+      if (!anterior || anterior.estado !== 'ACTIVA') {
+        throw new Error('La reserva no existe o ya no está activa');
+      }
+
+      // Verificar cupo de la NUEVA clase (con bloqueo, igual que reservarClase)
+      const [claseNueva] = await tx.$queryRaw`
+        SELECT id, "cupoMaximo" FROM "Clase" WHERE id = ${nuevaClaseId} FOR UPDATE`;
+      if (!claseNueva) throw new Error('La clase destino no existe');
+
+      const ocupados = await tx.reserva.count({
+        where: { claseId: nuevaClaseId, estado: 'ACTIVA' },
+      });
+      if (ocupados >= claseNueva.cupoMaximo) {
+        throw new CupoLlenoError(`La clase destino está llena (${ocupados}/${claseNueva.cupoMaximo})`);
+      }
+
+      // Liberar la reserva anterior (sin devolver saldo: es un reagendamiento, no cancelación)
+      await tx.reserva.update({ where: { id: reservaId }, data: { estado: 'REAGENDADA' } });
+
+      // Crear la nueva reserva ligada al MISMO paquete (no se descuenta de nuevo)
+      const nueva = await tx.reserva.create({
+        data: {
+          ninoId: anterior.ninoId,
+          claseId: nuevaClaseId,
+          paqueteId: anterior.paqueteId,
+          estado: 'ACTIVA',
+        },
+      });
+
+      return nueva;
+    });
+  }
+
+  return { reservarClase, cancelarReserva, reagendarReserva };
 }
 
 module.exports = { crearReservaService, CupoLlenoError, SinSaldoError };

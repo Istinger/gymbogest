@@ -9,7 +9,9 @@ const { verificarToken, permitirRoles } = require('./middleware/auth');
 
 app.use('/api/auth', require('./routes/auth'));       // RNF-01
 app.use('/api/familias', require('./routes/familias')); // RF-01 (Fase 1)
-app.use('/api/reservas', require('./routes/reservas')); // RF-02/03
+app.use('/api/clases', require('./routes/clases'));     // RF-02 (Fase 2: T07)
+app.use('/api/agenda', require('./routes/agenda'));     // T10 (Fase 2)
+app.use('/api/reservas', require('./routes/reservas')); // RF-02/03 (+ T09 reagendar)
 
 // Stub temporal de RF-07 (se implementa completo en Fase 4 / T15).
 // Ya sirve para probar la AUTORIZACIÓN por rol (RNF-01).
