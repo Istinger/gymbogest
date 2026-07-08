@@ -8,6 +8,7 @@ app.use(express.json());
 const { verificarToken, permitirRoles } = require('./middleware/auth');
 
 app.use('/api/auth', require('./routes/auth'));       // RNF-01
+app.use('/api/familias', require('./routes/familias')); // RF-01 (Fase 1)
 app.use('/api/reservas', require('./routes/reservas')); // RF-02/03
 
 // Stub temporal de RF-07 (se implementa completo en Fase 4 / T15).

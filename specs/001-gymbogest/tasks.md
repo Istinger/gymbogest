@@ -3,17 +3,17 @@
 Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar.
 
 ## Fase 0 — Cimientos
-- [ ] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
+- [x] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
 - [x] T02 · Semillas: 1 propietaria, 1 recepcionista, 2 educadoras, programas y 6 clases de ejemplo. (seed.js) — incluye 1 clase pre-llenada con 9 reservas para demostrar el rechazo del cupo n.º 10 en la defensa.
 - [x] T03 · Auth: login JWT + bcrypt + middleware de roles. (RNF-01) — src/middleware/auth.js, src/routes/auth.js
 - [x] T03b · Auditoría por TRIGGERS en tablas críticas. (RNF-07) — database/triggers_auditoria.sql. Aplicar UNA VEZ tras cada `migrate dev`/`migrate deploy`: `docker compose exec -T db psql -U gymbo -d gymbogest < database/triggers_auditoria.sql`
 - [x] T03c · Pruebas unitarias del servicio de reservas (Jest). — tests/reservaService.test.js
-- [ ] T03d · Pruebas de integración (Supertest + BD gymbogest_test). — tests/api.integration.test.js
+- [x] T03d · Pruebas de integración (Supertest + BD gymbogest_test). — tests/api.integration.test.js
 
 ## Fase 1 — Núcleo de inscripciones (HF-1)
-- [ ] T04 · POST /api/familias — crea Familia+Tutor(Persona)+Nino en transacción. (RF-01)
-- [ ] T05 · Manejo de cédula duplicada → asociar niño a familia existente. (CU-01 exc. 6)
-- [ ] T06 · GET /api/familias, GET /api/familias/:id (ficha completa).
+- [x] T04 · POST /api/familias — crea Familia+Tutor(Persona)+Nino en transacción. (RF-01) — services/familiaService.js + routes/familias.js
+- [x] T05 · Manejo de cédula duplicada → asociar niño a familia existente. (CU-01 exc. 6) — probado en tests/familiaService.test.js
+- [x] T06 · GET /api/familias, GET /api/familias/:id (ficha completa).
 
 ## Fase 2 — Agendamiento (HF-2, HF-3) ⭐ el corazón
 - [ ] T07 · CRUD /api/clases con cupoMaximo=9. (RF-02)
