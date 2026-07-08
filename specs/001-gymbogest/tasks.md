@@ -3,12 +3,12 @@
 Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar.
 
 ## Fase 0 — Cimientos
-- [x] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
+- [ ] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
 - [x] T02 · Semillas: 1 propietaria, 1 recepcionista, 2 educadoras, programas y 6 clases de ejemplo. (seed.js) — incluye 1 clase pre-llenada con 9 reservas para demostrar el rechazo del cupo n.º 10 en la defensa.
 - [x] T03 · Auth: login JWT + bcrypt + middleware de roles. (RNF-01) — src/middleware/auth.js, src/routes/auth.js
 - [x] T03b · Auditoría por TRIGGERS en tablas críticas. (RNF-07) — database/triggers_auditoria.sql. Aplicar UNA VEZ tras cada `migrate dev`/`migrate deploy`: `docker compose exec -T db psql -U gymbo -d gymbogest < database/triggers_auditoria.sql`
 - [x] T03c · Pruebas unitarias del servicio de reservas (Jest). — tests/reservaService.test.js
-- [x] T03d · Pruebas de integración (Supertest + BD gymbogest_test). — tests/api.integration.test.js
+- [ ] T03d · Pruebas de integración (Supertest + BD gymbogest_test). — tests/api.integration.test.js
 
 ## Fase 1 — Núcleo de inscripciones (HF-1)
 - [x] T04 · POST /api/familias — crea Familia+Tutor(Persona)+Nino en transacción. (RF-01) — services/familiaService.js + routes/familias.js
@@ -23,9 +23,9 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T11 · Prueba de aceptación: intentar reserva n.º 10 → 409 (probado). Concurrencia: pendiente de prueba de carga real (Fase 6).
 
 ## Fase 3 — Operación diaria (HF-4, HF-5, HF-6)
-- [ ] T12 · POST /api/asistencias (solo niños con reserva en la clase). (RF-04)
-- [ ] T13 · POST/GET /api/progresos por niño; tutor solo ve a sus hijos. (RF-05)
-- [ ] T14 · CRUD /api/materiales + movimientos + GET /api/materiales/alertas. (RF-06)
+- [x] T12 · POST /api/asistencias (solo niños con reserva en la clase). (RF-04) — asistenciaService.js
+- [x] T13 · POST/GET /api/progresos por niño; tutor solo ve a sus hijos (LOPDP). (RF-05) — progresoService.js
+- [x] T14 · CRUD /api/materiales + movimientos + GET /api/materiales/alertas. (RF-06) — materialService.js
 
 ## Fase 4 — Valor gerencial (HF-7, HF-8)
 - [ ] T15 · GET /api/indicadores (activos, por semana, por canal, conversión prueba). (RF-07)

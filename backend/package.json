@@ -8,7 +8,7 @@
     "start": "node src/server.js",
     "migrate": "prisma migrate dev",
     "seed": "node prisma/seed.js",
-    "test": "jest tests/reservaService.test.js tests/familiaService.test.js tests/claseService.test.js",
+    "test": "jest tests/reservaService.test.js tests/familiaService.test.js tests/claseService.test.js tests/fase3.test.js",
     "test:integration": "jest tests/api.integration.test.js --runInBand",
     "backup": "bash ../scripts/backup.sh"
   },

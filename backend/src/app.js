@@ -12,6 +12,9 @@ app.use('/api/familias', require('./routes/familias')); // RF-01 (Fase 1)
 app.use('/api/clases', require('./routes/clases'));     // RF-02 (Fase 2: T07)
 app.use('/api/agenda', require('./routes/agenda'));     // T10 (Fase 2)
 app.use('/api/reservas', require('./routes/reservas')); // RF-02/03 (+ T09 reagendar)
+app.use('/api/asistencias', require('./routes/asistencias')); // RF-04 (Fase 3: T12)
+app.use('/api/progresos', require('./routes/progresos'));     // RF-05 (Fase 3: T13)
+app.use('/api/materiales', require('./routes/materiales'));   // RF-06 (Fase 3: T14)
 
 // Stub temporal de RF-07 (se implementa completo en Fase 4 / T15).
 // Ya sirve para probar la AUTORIZACIÓN por rol (RNF-01).
