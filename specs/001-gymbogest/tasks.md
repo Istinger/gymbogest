@@ -3,7 +3,7 @@
 Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar.
 
 ## Fase 0 — Cimientos
-- [ ] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
+- [X] T01 · Levantar docker-compose (postgres) y conectar Prisma. `npx prisma migrate dev`
 - [x] T02 · Semillas: 1 propietaria, 1 recepcionista, 2 educadoras, programas y 6 clases de ejemplo. (seed.js) — incluye 1 clase pre-llenada con 9 reservas para demostrar el rechazo del cupo n.º 10 en la defensa.
 - [x] T03 · Auth: login JWT + bcrypt + middleware de roles. (RNF-01) — src/middleware/auth.js, src/routes/auth.js
 - [x] T03b · Auditoría por TRIGGERS en tablas críticas. (RNF-07) — database/triggers_auditoria.sql. Aplicar UNA VEZ tras cada `migrate dev`/`migrate deploy`: `docker compose exec -T db psql -U gymbo -d gymbogest < database/triggers_auditoria.sql`
@@ -28,9 +28,9 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T14 · CRUD /api/materiales + movimientos + GET /api/materiales/alertas. (RF-06) — materialService.js
 
 ## Fase 4 — Valor gerencial (HF-7, HF-8)
-- [ ] T15 · GET /api/indicadores (activos, por semana, por canal, conversión prueba). (RF-07)
-- [ ] T16 · CRUD /api/corporativos (solicitudes On The Go). (RF-08)
-- [ ] T17 · Pagos: POST /api/pagos con mock Dátil → numeroComprobante.
+- [x] T15 · GET /api/indicadores (activos, inscritos, por canal, conversión, asistencia por clase). (RF-07) — indicadorService.js
+- [x] T16 · CRUD /api/corporativos (solicitudes On The Go). (RF-08) — corporativoService.js
+- [x] T17 · Pagos: POST /api/pagos con mock Dátil → numeroComprobante. — pagoService.js (integración real en backlog.md)
 
 ## Fase 5 — Frontend React
 - [ ] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.
