@@ -19,6 +19,7 @@ datasource db {
 
 // ---------- Autenticación (RNF-01, LOPDP) ----------
 enum Rol {
+  ADMIN // administra cuentas y revisa logs de ingreso (no es rol operativo)
   PROPIETARIA
   RECEPCION
   EDUCADORA
@@ -34,6 +35,15 @@ model Usuario {
   personaId    Int?     @unique
   creadoEn     DateTime @default(now())
   auditorias   Auditoria[]
+}
+
+// Bitácora de ingresos al sistema (login exitoso o fallido) — panel ADMIN
+model LogAcceso {
+  id     Int      @id @default(autoincrement())
+  fecha  DateTime @default(now())
+  correo String   // correo intentado (exista o no la cuenta)
+  exito  Boolean
+  ip     String?
 }
 
 // ---------- Auditoría (RNF-07) ----------

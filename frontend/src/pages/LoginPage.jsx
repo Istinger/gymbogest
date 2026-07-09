@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { loginAPI } from '../api/auth';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,10 +17,11 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      const data = await loginAPI(email, password);
+      const { data } = await axios.post('/api/auth/login', { correo: email, password });
       login(data.token, data.rol);
 
       const roleRoutes = {
+        ADMIN: '/panel/admin',
         PROPIETARIA: '/panel/propietaria',
         RECEPCION: '/panel/recepcion',
         EDUCADORA: '/panel/educadora',
@@ -29,7 +30,7 @@ export function LoginPage() {
 
       navigate(roleRoutes[data.rol] || '/');
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión');
+      setError(err.response?.data?.error || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
@@ -79,9 +80,17 @@ export function LoginPage() {
             </button>
           </form>
 
+          <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
+            ¿No tienes cuenta?{' '}
+            <Link to="/registro" style={{ color: '#667eea', fontWeight: 600 }}>
+              Crear una cuenta
+            </Link>
+          </p>
+
           <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9f9f9', borderRadius: '4px', fontSize: '0.9rem', color: '#666' }}>
             <p><strong>Credenciales de prueba:</strong></p>
-            <p>Propietaria: propietaria@gymbo.ec / semilla123</p>
+            <p>Admin: admin@gymbo.ec / admin123</p>
+            <p>Propietaria: propietaria@gymbo.ec / propietaria123</p>
             <p>Recepción: recepcion@gymbo.ec / semilla123</p>
             <p>Educadora: educadora1@gymbo.ec / semilla123</p>
             <p>Tutor: tutor@gymbo.ec / semilla123</p>

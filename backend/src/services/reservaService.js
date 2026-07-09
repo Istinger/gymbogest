@@ -17,6 +17,8 @@ class CupoLlenoError extends Error {}
 class SinSaldoError extends Error {}
 // @@unique([ninoId, claseId]): un niño no reserva dos veces la misma clase
 class ReservaDuplicadaError extends Error {}
+// Regla de negocio: un niño no puede tener dos clases a la misma hora
+class ChoqueHorarioError extends Error {}
 
 function crearReservaService(prisma) {
   async function reservarClase({ ninoId, claseId, paqueteId, usuarioId }) {
@@ -28,7 +30,7 @@ function crearReservaService(prisma) {
 
       // 3-4: consultar cupo con la fila de la clase bloqueada (evita carrera)
       const [clase] = await tx.$queryRaw`
-        SELECT id, "cupoMaximo" FROM "Clase" WHERE id = ${claseId} FOR UPDATE`;
+        SELECT id, "cupoMaximo", "fechaHora" FROM "Clase" WHERE id = ${claseId} FOR UPDATE`;
       if (!clase) throw new Error('La clase no existe');
 
       // Regla @@unique([ninoId, claseId]): detectar el duplicado ANTES de
@@ -39,6 +41,16 @@ function crearReservaService(prisma) {
       if (existente) {
         throw new ReservaDuplicadaError(
           'Este niño ya tiene una reserva en esta clase. Elige otro horario.');
+      }
+
+      // Choque de horarios: el niño no puede tener otra clase ACTIVA a la misma hora
+      const choque = await tx.reserva.findFirst({
+        where: { ninoId, estado: 'ACTIVA', clase: { fechaHora: clase.fechaHora } },
+        include: { clase: true },
+      });
+      if (choque) {
+        throw new ChoqueHorarioError(
+          `El niño ya tiene una clase de ${choque.clase.programa} a esa misma hora. Elige otro horario.`);
       }
 
       const ocupados = await tx.reserva.count({
@@ -102,7 +114,7 @@ function crearReservaService(prisma) {
 
       // Verificar cupo de la NUEVA clase (con bloqueo, igual que reservarClase)
       const [claseNueva] = await tx.$queryRaw`
-        SELECT id, "cupoMaximo" FROM "Clase" WHERE id = ${nuevaClaseId} FOR UPDATE`;
+        SELECT id, "cupoMaximo", "fechaHora" FROM "Clase" WHERE id = ${nuevaClaseId} FOR UPDATE`;
       if (!claseNueva) throw new Error('La clase destino no existe');
 
       // Mismo control de duplicado que reservarClase (@@unique ninoId+claseId)
@@ -112,6 +124,21 @@ function crearReservaService(prisma) {
       if (yaReservada) {
         throw new ReservaDuplicadaError(
           'Este niño ya tiene una reserva en la clase destino. Elige otro horario.');
+      }
+
+      // Choque de horarios: otra clase ACTIVA a la misma hora (sin contar la que se reagenda)
+      const choque = await tx.reserva.findFirst({
+        where: {
+          ninoId: anterior.ninoId,
+          estado: 'ACTIVA',
+          id: { not: reservaId },
+          clase: { fechaHora: claseNueva.fechaHora },
+        },
+        include: { clase: true },
+      });
+      if (choque) {
+        throw new ChoqueHorarioError(
+          `El niño ya tiene una clase de ${choque.clase.programa} a esa misma hora. Elige otro horario.`);
       }
 
       const ocupados = await tx.reserva.count({
@@ -141,4 +168,6 @@ function crearReservaService(prisma) {
   return { reservarClase, cancelarReserva, reagendarReserva };
 }
 
-module.exports = { crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError };
+module.exports = {
+  crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
+};

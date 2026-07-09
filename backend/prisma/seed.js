@@ -25,6 +25,14 @@ async function main() {
   console.log('Sembrando datos de ejemplo...');
 
   // ---------- Usuarios internos (T02) ----------
+  // ADMIN: gestión de cuentas y bitácora de ingresos (sin persona: no es operativo)
+  await prisma.usuario.create({
+    data: {
+      correo: 'admin@gymbo.ec',
+      passwordHash: await bcrypt.hash('admin123', 10),
+      rol: 'ADMIN',
+    },
+  });
   await crearUsuario({
     nombres: 'Karen Vaca', cedula: '1700000001', correo: 'propietaria@gymbo.ec',
     telefono: '0990000001', rolPersona: 'propietaria', rol: 'PROPIETARIA',

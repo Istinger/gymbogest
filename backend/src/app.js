@@ -16,6 +16,8 @@ app.use('/api/materiales', require('./routes/materiales'));   // RF-06 (Fase 3: 
 app.use('/api/indicadores', require('./routes/indicadores'));  // RF-07 (Fase 4: T15)
 app.use('/api/corporativos', require('./routes/corporativos')); // RF-08 (Fase 4: T16)
 app.use('/api/pagos', require('./routes/pagos'));               // Fase 4: T17
+app.use('/api/usuarios', require('./routes/usuarios'));         // T22: gestión de cuentas
+app.use('/api/empleados', require('./routes/empleados'));       // apoyo: asignar clases a educadoras
 
 app.get('/api/salud', (_req, res) => res.json({ ok: true, sistema: 'GymboGest' }));
 module.exports = app;

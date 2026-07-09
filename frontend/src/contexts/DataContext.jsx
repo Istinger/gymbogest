@@ -67,13 +67,14 @@ export function DataProvider({ children }) {
 
   const getAgenda = useCallback(async (fecha) => {
     const response = await handleRequest('getAgenda', async () => {
+      // La API devuelve directamente el array de clases del día
       const { data } = await axiosInstance.get('/agenda', {
         params: { fecha },
       });
-      setAgenda(data.clases || []);
+      setAgenda(Array.isArray(data) ? data : []);
       return data;
     }, null, false); // No mostrar error silenciosamente en carga
-    return response || { clases: [] };
+    return response || [];
   }, [axiosInstance, handleRequest]);
 
   const createReserva = useCallback(async (reservaData) => {
@@ -152,12 +153,82 @@ export function DataProvider({ children }) {
     }, 'Servicio corporativo registrado correctamente', true);
   }, [axiosInstance, handleRequest]);
 
+  // action: 'asignar' ({ educadoraId }) o 'estado' ({ estado })
+  const updateCorporativo = useCallback(async (id, action, payload) => {
+    return handleRequest(`updateCorporativo_${id}`, async () => {
+      const { data } = await axiosInstance.put(`/corporativos/${id}/${action}`, payload);
+      return data;
+    }, 'Solicitud corporativa actualizada', true);
+  }, [axiosInstance, handleRequest]);
+
+  // Sign up público (sin token): crea cuenta con rol TUTOR por defecto
+  const signUp = useCallback(async (datos) => {
+    return handleRequest('signUp', async () => {
+      const { data } = await axios.post('/api/auth/registro', datos);
+      return data;
+    }, 'Cuenta creada. Ya puedes iniciar sesión', true);
+  }, [handleRequest]);
+
+  // Bitácora de ingresos al sistema (solo ADMIN)
+  const getAccesos = useCallback(async () => {
+    return handleRequest('getAccesos', async () => {
+      const { data } = await axiosInstance.get('/usuarios/accesos');
+      return data;
+    }, null, false);
+  }, [axiosInstance, handleRequest]);
+
+  // Administración de cuentas (solo ADMIN)
+  const getUsuarios = useCallback(async () => {
+    return handleRequest('getUsuarios', async () => {
+      const { data } = await axiosInstance.get('/usuarios');
+      return data;
+    }, null, false);
+  }, [axiosInstance, handleRequest]);
+
+  const createUsuario = useCallback(async (datos) => {
+    return handleRequest('createUsuario', async () => {
+      const { data } = await axiosInstance.post('/usuarios', datos);
+      return data;
+    }, 'Usuario creado correctamente', true);
+  }, [axiosInstance, handleRequest]);
+
+  const updateUsuario = useCallback(async (id, datos) => {
+    return handleRequest(`updateUsuario_${id}`, async () => {
+      const { data } = await axiosInstance.put(`/usuarios/${id}`, datos);
+      return data;
+    }, 'Usuario actualizado correctamente', true);
+  }, [axiosInstance, handleRequest]);
+
   const getClases = useCallback(async (filtros = {}) => {
     return handleRequest('getClases', async () => {
       const { data } = await axiosInstance.get('/clases', {
         params: filtros,
       });
       setClases(data);
+      return data;
+    }, null, false);
+  }, [axiosInstance, handleRequest]);
+
+  // Programación de clases (Propietaria): crear/actualizar + educadoras
+  const createClase = useCallback(async (claseData) => {
+    return handleRequest('createClase', async () => {
+      const { data } = await axiosInstance.post('/clases', claseData);
+      return data;
+    }, 'Clase programada correctamente', true);
+  }, [axiosInstance, handleRequest]);
+
+  const updateClase = useCallback(async (id, claseData) => {
+    return handleRequest(`updateClase_${id}`, async () => {
+      const { data } = await axiosInstance.put(`/clases/${id}`, claseData);
+      return data;
+    }, 'Clase actualizada correctamente', true);
+  }, [axiosInstance, handleRequest]);
+
+  const getEmpleados = useCallback(async (rol) => {
+    return handleRequest('getEmpleados', async () => {
+      const { data } = await axiosInstance.get('/empleados', {
+        params: rol ? { rol } : {},
+      });
       return data;
     }, null, false);
   }, [axiosInstance, handleRequest]);
@@ -184,6 +255,9 @@ export function DataProvider({ children }) {
     getMisReservas,
     getClases,
     getClase,
+    createClase,
+    updateClase,
+    getEmpleados,
     getAsistencias,
     createAsistencia,
     getProgresos,
@@ -191,6 +265,12 @@ export function DataProvider({ children }) {
     getIndicadores,
     getCorporativos,
     createCorporativo,
+    updateCorporativo,
+    signUp,
+    getUsuarios,
+    createUsuario,
+    updateUsuario,
+    getAccesos,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

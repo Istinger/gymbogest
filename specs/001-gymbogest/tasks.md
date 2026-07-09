@@ -37,7 +37,7 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T19 · Panel Recepción: inscripciones + agenda del día (wireframe 3).
 - [x] T20 · Portal Tutor: reservar/reagendar/cancelar.
 - [x] T21 · Panel Educadora: lista de clase, asistencia, progreso.
-- [ ] T22 · Panel Propietaria: tablero de indicadores + corporativos.
+- [x] T22 · Panel Propietaria: tablero de indicadores + corporativos + gestión de cuentas (sign up público rol TUTOR; la Propietaria eleva roles y cambia correos/contraseñas/nombres).
 
 ## Fase 6 — Cierre para la defensa
 - [ ] T23 · pg_dump → database/respaldo_gymbogest.sql (rúbrica). Automatizado: scripts/backup.sh (+cron)

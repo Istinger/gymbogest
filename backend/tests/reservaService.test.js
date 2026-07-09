@@ -8,20 +8,27 @@
 //   exc. paso 4: paquete sin saldo       → rechazar
 // Ejecutar: npm test
 // ============================================================
-const { crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError } =
-  require('../src/services/reservaService');
+const {
+  crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
+} = require('../src/services/reservaService');
 
-function crearPrismaFalso({ ocupados, saldoClases, reservaAnterior, reservaExistente = null }) {
+function crearPrismaFalso({
+  ocupados, saldoClases, reservaAnterior, reservaExistente = null, reservaEnChoque = null,
+}) {
   const tx = {
     $executeRawUnsafe: jest.fn(),
-    $queryRaw: jest.fn().mockResolvedValue([{ id: 10, cupoMaximo: 9 }]),
+    $queryRaw: jest.fn().mockResolvedValue([
+      { id: 10, cupoMaximo: 9, fechaHora: new Date('2026-07-10T10:00:00Z') },
+    ]),
     reserva: {
       count: jest.fn().mockResolvedValue(ocupados),
       create: jest.fn().mockResolvedValue({ id: 99, estado: 'ACTIVA' }),
       update: jest.fn().mockResolvedValue({ id: 1, estado: 'CANCELADA', paqueteId: 5 }),
       findUnique: jest.fn().mockResolvedValue(reservaAnterior),
-      // @@unique([ninoId, claseId]): null = no hay reserva previa del niño
-      findFirst: jest.fn().mockResolvedValue(reservaExistente),
+      // findFirst se usa para 2 reglas: duplicado (@@unique) y choque de horario
+      // (esta última filtra por la relación `clase`); se distingue por el where
+      findFirst: jest.fn(({ where }) =>
+        Promise.resolve(where.clase ? reservaEnChoque : reservaExistente)),
     },
     paquete: {
       findUnique: jest.fn().mockResolvedValue({ id: 5, saldoClases }),
@@ -59,6 +66,18 @@ describe('regla @@unique([ninoId, claseId]): sin reservas duplicadas', () => {
     });
     const servicio = crearReservaService(prisma);
     await expect(servicio.reservarClase(datos)).rejects.toThrow(ReservaDuplicadaError);
+    expect(tx.reserva.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('regla de negocio: sin choque de horarios', () => {
+  test('rechaza si el niño ya tiene otra clase ACTIVA a la misma hora', async () => {
+    const { prisma, tx } = crearPrismaFalso({
+      ocupados: 2, saldoClases: 3,
+      reservaEnChoque: { id: 60, estado: 'ACTIVA', clase: { id: 11, programa: 'MUSIC' } },
+    });
+    const servicio = crearReservaService(prisma);
+    await expect(servicio.reservarClase(datos)).rejects.toThrow(ChoqueHorarioError);
     expect(tx.reserva.create).not.toHaveBeenCalled();
   });
 });

@@ -2,8 +2,9 @@
 const router = require('express').Router();
 const prisma = require('../prisma'); // singleton inyectado (SOLID-D)
 const { verificarToken } = require('../middleware/auth');
-const { crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError } =
-  require('../services/reservaService');
+const {
+  crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
+} = require('../services/reservaService');
 
 const servicio = crearReservaService(prisma);
 
@@ -71,6 +72,8 @@ router.post('/', verificarToken, async (req, res) => {
     // Carrera contra el @@unique([ninoId, claseId]): mismo mensaje amable
     if (e instanceof ReservaDuplicadaError || e.code === 'P2002')
       return res.status(409).json({ error: 'Este niño ya tiene una reserva en esta clase. Elige otro horario.', sugerencia: 'horarios_alternativos' });
+    if (e instanceof ChoqueHorarioError)
+      return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
     res.status(500).json({ error: e.message });
   }
 });
@@ -85,6 +88,8 @@ router.put('/:id/reagendar', verificarToken, async (req, res) => {
     if (e instanceof CupoLlenoError) return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
     if (e instanceof ReservaDuplicadaError || e.code === 'P2002')
       return res.status(409).json({ error: 'Este niño ya tiene una reserva en la clase destino. Elige otro horario.', sugerencia: 'horarios_alternativos' });
+    if (e instanceof ChoqueHorarioError)
+      return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
     res.status(400).json({ error: e.message });
   }
 });

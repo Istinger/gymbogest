@@ -113,7 +113,7 @@ function crearFamiliaService(prisma) {
       include: {
         tutores: { include: { persona: true } },
         ninos: true,
-        _count: { select: { paquetes: true } },
+        paquetes: true, // Recepción asigna clases: necesita el saldo de cada paquete
       },
       orderBy: { fechaRegistro: 'desc' },
     });

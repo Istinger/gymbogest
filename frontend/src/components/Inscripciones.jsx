@@ -137,31 +137,48 @@ export function Inscripciones() {
           <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'white' }}>
             <thead>
               <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #ddd' }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Tutor</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Cédula</th>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Correo</th>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Niños</th>
+                <th style={{ padding: '1rem', textAlign: 'left' }}>Tutor a cargo</th>
+                <th style={{ padding: '1rem', textAlign: 'left' }}>Cédula</th>
+                <th style={{ padding: '1rem', textAlign: 'left' }}>Contacto</th>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Canal</th>
               </tr>
             </thead>
             <tbody>
-              {familias.map((familia) => (
-                <tr key={familia.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '1rem' }}>
-                    {familia.tutores && familia.tutores.length > 0 ? familia.tutores[0].persona?.nombres : 'Sin tutor'}
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    {familia.tutores && familia.tutores.length > 0 ? familia.tutores[0].persona?.cedula : '-'}
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    {familia.tutores && familia.tutores.length > 0 ? familia.tutores[0].persona?.correo : '-'}
-                  </td>
-                  <td style={{ padding: '1rem' }}>
-                    {familia.ninos?.length || 0} niño(s)
-                  </td>
-                  <td style={{ padding: '1rem' }}>{familia.canalOrigen}</td>
-                </tr>
-              ))}
+              {familias.map((familia) => {
+                const tutor = familia.tutores?.[0];
+                return (
+                  <tr key={familia.id} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: '1rem' }}>
+                      {familia.ninos?.length ? (
+                        familia.ninos.map((nino) => (
+                          <div key={nino.id} style={{ marginBottom: '0.2rem' }}>
+                            🧒 {nino.nombres}
+                          </div>
+                        ))
+                      ) : (
+                        <span style={{ color: '#999' }}>Sin niños</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      {tutor ? (
+                        <>
+                          {tutor.persona?.nombres}
+                          <div style={{ fontSize: '0.8rem', color: '#888', textTransform: 'capitalize' }}>
+                            ({tutor.parentesco})
+                          </div>
+                        </>
+                      ) : 'Sin tutor'}
+                    </td>
+                    <td style={{ padding: '1rem' }}>{tutor?.persona?.cedula || '-'}</td>
+                    <td style={{ padding: '1rem', fontSize: '0.9rem' }}>
+                      {tutor?.persona?.correo || '-'}
+                      <div style={{ color: '#888' }}>{tutor?.persona?.telefono || ''}</div>
+                    </td>
+                    <td style={{ padding: '1rem' }}>{familia.canalOrigen}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

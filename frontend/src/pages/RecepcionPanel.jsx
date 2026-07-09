@@ -1,5 +1,6 @@
 import { Layout } from '../components/Layout';
 import { Inscripciones } from '../components/Inscripciones';
+import { AsignarClase } from '../components/AsignarClase';
 import { AgendaDelDia } from '../components/AgendaDelDia';
 
 export function RecepcionPanel() {
@@ -17,6 +18,8 @@ export function RecepcionPanel() {
 
         <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '1.5rem' }}>
           <Inscripciones />
+          <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+          <AsignarClase />
           <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid #eee' }} />
           <AgendaDelDia />
         </div>
