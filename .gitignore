@@ -50,3 +50,5 @@ database/*.sql
 !database/triggers_auditoria.sql
 *.dump
 *.sql.bak
+
+CLAUDE.md

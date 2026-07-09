@@ -33,7 +33,7 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T17 · Pagos: POST /api/pagos con mock Dátil → numeroComprobante. — pagoService.js (integración real en backlog.md)
 
 ## Fase 5 — Frontend React
-- [ ] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.
+- [x] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.
 - [ ] T19 · Panel Recepción: inscripciones + agenda del día (wireframe 3).
 - [ ] T20 · Portal Tutor: reservar/reagendar/cancelar.
 - [ ] T21 · Panel Educadora: lista de clase, asistencia, progreso.
