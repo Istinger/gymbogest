@@ -15,6 +15,8 @@
 
 class CupoLlenoError extends Error {}
 class SinSaldoError extends Error {}
+// @@unique([ninoId, claseId]): un niño no reserva dos veces la misma clase
+class ReservaDuplicadaError extends Error {}
 
 function crearReservaService(prisma) {
   async function reservarClase({ ninoId, claseId, paqueteId, usuarioId }) {
@@ -28,6 +30,16 @@ function crearReservaService(prisma) {
       const [clase] = await tx.$queryRaw`
         SELECT id, "cupoMaximo" FROM "Clase" WHERE id = ${claseId} FOR UPDATE`;
       if (!clase) throw new Error('La clase no existe');
+
+      // Regla @@unique([ninoId, claseId]): detectar el duplicado ANTES de
+      // crear, para responder un mensaje claro en vez del error crudo de BD
+      const existente = await tx.reserva.findFirst({
+        where: { ninoId, claseId },
+      });
+      if (existente) {
+        throw new ReservaDuplicadaError(
+          'Este niño ya tiene una reserva en esta clase. Elige otro horario.');
+      }
 
       const ocupados = await tx.reserva.count({
         where: { claseId, estado: 'ACTIVA' },
@@ -93,6 +105,15 @@ function crearReservaService(prisma) {
         SELECT id, "cupoMaximo" FROM "Clase" WHERE id = ${nuevaClaseId} FOR UPDATE`;
       if (!claseNueva) throw new Error('La clase destino no existe');
 
+      // Mismo control de duplicado que reservarClase (@@unique ninoId+claseId)
+      const yaReservada = await tx.reserva.findFirst({
+        where: { ninoId: anterior.ninoId, claseId: nuevaClaseId },
+      });
+      if (yaReservada) {
+        throw new ReservaDuplicadaError(
+          'Este niño ya tiene una reserva en la clase destino. Elige otro horario.');
+      }
+
       const ocupados = await tx.reserva.count({
         where: { claseId: nuevaClaseId, estado: 'ACTIVA' },
       });
@@ -120,4 +141,4 @@ function crearReservaService(prisma) {
   return { reservarClase, cancelarReserva, reagendarReserva };
 }
 
-module.exports = { crearReservaService, CupoLlenoError, SinSaldoError };
+module.exports = { crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError };

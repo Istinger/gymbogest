@@ -8,10 +8,10 @@
 //   exc. paso 4: paquete sin saldo       → rechazar
 // Ejecutar: npm test
 // ============================================================
-const { crearReservaService, CupoLlenoError, SinSaldoError } =
+const { crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError } =
   require('../src/services/reservaService');
 
-function crearPrismaFalso({ ocupados, saldoClases, reservaAnterior }) {
+function crearPrismaFalso({ ocupados, saldoClases, reservaAnterior, reservaExistente = null }) {
   const tx = {
     $executeRawUnsafe: jest.fn(),
     $queryRaw: jest.fn().mockResolvedValue([{ id: 10, cupoMaximo: 9 }]),
@@ -20,6 +20,8 @@ function crearPrismaFalso({ ocupados, saldoClases, reservaAnterior }) {
       create: jest.fn().mockResolvedValue({ id: 99, estado: 'ACTIVA' }),
       update: jest.fn().mockResolvedValue({ id: 1, estado: 'CANCELADA', paqueteId: 5 }),
       findUnique: jest.fn().mockResolvedValue(reservaAnterior),
+      // @@unique([ninoId, claseId]): null = no hay reserva previa del niño
+      findFirst: jest.fn().mockResolvedValue(reservaExistente),
     },
     paquete: {
       findUnique: jest.fn().mockResolvedValue({ id: 5, saldoClases }),
@@ -46,6 +48,18 @@ describe('RF-02: control de cupo máximo (9 niños)', () => {
     const r = await servicio.reservarClase(datos);
     expect(r.id).toBe(99);
     expect(tx.reserva.create).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('regla @@unique([ninoId, claseId]): sin reservas duplicadas', () => {
+  test('rechaza si el niño ya tiene una reserva en la misma clase', async () => {
+    const { prisma, tx } = crearPrismaFalso({
+      ocupados: 2, saldoClases: 3,
+      reservaExistente: { id: 50, ninoId: 1, claseId: 10, estado: 'ACTIVA' },
+    });
+    const servicio = crearReservaService(prisma);
+    await expect(servicio.reservarClase(datos)).rejects.toThrow(ReservaDuplicadaError);
+    expect(tx.reserva.create).not.toHaveBeenCalled();
   });
 });
 

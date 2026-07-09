@@ -2,10 +2,63 @@
 const router = require('express').Router();
 const prisma = require('../prisma'); // singleton inyectado (SOLID-D)
 const { verificarToken } = require('../middleware/auth');
-const { crearReservaService, CupoLlenoError, SinSaldoError } =
+const { crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError } =
   require('../services/reservaService');
 
 const servicio = crearReservaService(prisma);
+
+// GET /api/reservas — Mis reservas (como tutor)
+router.get('/', verificarToken, async (req, res) => {
+  try {
+    // El JWT solo trae { id, rol }: buscar la persona del usuario en BD
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuario.id },
+    });
+
+    if (!usuario?.personaId) {
+      return res.json([]);
+    }
+
+    // Obtener los tutores asociados a esta persona
+    const tutores = await prisma.tutor.findMany({
+      where: { personaId: usuario.personaId },
+    });
+
+    if (tutores.length === 0) {
+      return res.json([]);
+    }
+
+    // Obtener reservas de los niños de las familias de estos tutores
+    const reservas = await prisma.reserva.findMany({
+      where: {
+        nino: {
+          familia: {
+            id: {
+              in: tutores.map((t) => t.familiaId),
+            },
+          },
+        },
+      },
+      include: {
+        nino: true,
+        clase: {
+          include: {
+            empleado: {
+              include: {
+                persona: true,
+              },
+            },
+          },
+        },
+        paquete: true,
+      },
+      orderBy: { fecha: 'desc' },
+    });
+    res.json(reservas);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 // POST /api/reservas — HF-3 (requiere autenticación)
 router.post('/', verificarToken, async (req, res) => {
@@ -15,6 +68,9 @@ router.post('/', verificarToken, async (req, res) => {
   } catch (e) {
     if (e instanceof CupoLlenoError) return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
     if (e instanceof SinSaldoError) return res.status(409).json({ error: e.message, sugerencia: 'clases_adicionales' });
+    // Carrera contra el @@unique([ninoId, claseId]): mismo mensaje amable
+    if (e instanceof ReservaDuplicadaError || e.code === 'P2002')
+      return res.status(409).json({ error: 'Este niño ya tiene una reserva en esta clase. Elige otro horario.', sugerencia: 'horarios_alternativos' });
     res.status(500).json({ error: e.message });
   }
 });
@@ -27,6 +83,8 @@ router.put('/:id/reagendar', verificarToken, async (req, res) => {
     res.json(nueva);
   } catch (e) {
     if (e instanceof CupoLlenoError) return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
+    if (e instanceof ReservaDuplicadaError || e.code === 'P2002')
+      return res.status(409).json({ error: 'Este niño ya tiene una reserva en la clase destino. Elige otro horario.', sugerencia: 'horarios_alternativos' });
     res.status(400).json({ error: e.message });
   }
 });

@@ -22,6 +22,49 @@ router.post('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'TUTO
     }
   });
 
+// GET /api/familias/mis-ninos — Niños del tutor logueado
+router.get('/mis-ninos', verificarToken, permitirRoles('TUTOR'),
+  async (req, res) => {
+    try {
+      // El JWT solo trae { id, rol }: buscar la persona del usuario en BD
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: req.usuario.id },
+      });
+
+      if (!usuario?.personaId) {
+        return res.status(400).json({ error: 'Usuario sin persona asociada' });
+      }
+
+      // Obtener los tutores asociados a esta persona
+      const tutores = await prisma.tutor.findMany({
+        where: { personaId: usuario.personaId },
+      });
+
+      if (tutores.length === 0) {
+        return res.json([]);
+      }
+
+      // Obtener niños de las familias de estos tutores
+      const ninos = await prisma.nino.findMany({
+        where: {
+          familia: {
+            id: {
+              in: tutores.map((t) => t.familiaId),
+            },
+          },
+        },
+        include: {
+          familia: {
+            include: { paquetes: true },
+          },
+        },
+      });
+      res.json(ninos);
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
 // GET /api/familias — T06 (listado para el panel de Recepción)
 router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
   async (_req, res) => {

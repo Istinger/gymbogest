@@ -34,9 +34,9 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 
 ## Fase 5 — Frontend React
 - [x] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.
-- [ ] T19 · Panel Recepción: inscripciones + agenda del día (wireframe 3).
-- [ ] T20 · Portal Tutor: reservar/reagendar/cancelar.
-- [ ] T21 · Panel Educadora: lista de clase, asistencia, progreso.
+- [x] T19 · Panel Recepción: inscripciones + agenda del día (wireframe 3).
+- [x] T20 · Portal Tutor: reservar/reagendar/cancelar.
+- [x] T21 · Panel Educadora: lista de clase, asistencia, progreso.
 - [ ] T22 · Panel Propietaria: tablero de indicadores + corporativos.
 
 ## Fase 6 — Cierre para la defensa
