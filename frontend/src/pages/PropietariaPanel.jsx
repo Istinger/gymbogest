@@ -203,6 +203,123 @@ function TableroIndicadores() {
   );
 }
 
+// ---------- Calendario mensual: qué educadora imparte qué clase y a qué hora ----------
+const COLORES_EDUCADORA = ['#667eea', '#27ae60', '#e67e22', '#e74c3c', '#16a085', '#8e44ad'];
+
+function CalendarioMensual({ clases }) {
+  const [mes, setMes] = useState(() => {
+    const hoy = new Date();
+    return new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  });
+
+  const cambiarMes = (delta) => {
+    setMes((m) => new Date(m.getFullYear(), m.getMonth() + delta, 1));
+  };
+
+  // Color estable por educadora (según orden de aparición)
+  const nombresEducadoras = [...new Set(clases.map((c) => c.empleado?.persona?.nombres || 'Sin asignar'))];
+  const colorDe = (nombre) => COLORES_EDUCADORA[nombresEducadoras.indexOf(nombre) % COLORES_EDUCADORA.length];
+
+  // Clases del mes visible, agrupadas por día (fecha local)
+  const clasesDelMes = clases.filter((c) => {
+    const d = new Date(c.fechaHora);
+    return d.getFullYear() === mes.getFullYear() && d.getMonth() === mes.getMonth();
+  });
+  const porDia = {};
+  for (const c of clasesDelMes) {
+    const dia = new Date(c.fechaHora).getDate();
+    (porDia[dia] ??= []).push(c);
+  }
+  Object.values(porDia).forEach((lista) => lista.sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora)));
+
+  // Celdas del calendario: la semana empieza en lunes
+  const primerDiaSemana = (mes.getDay() + 6) % 7; // 0 = lunes
+  const diasDelMes = new Date(mes.getFullYear(), mes.getMonth() + 1, 0).getDate();
+  const celdas = [...Array(primerDiaSemana).fill(null), ...Array.from({ length: diasDelMes }, (_, i) => i + 1)];
+
+  const hoy = new Date();
+  const esHoy = (dia) => dia === hoy.getDate() && mes.getMonth() === hoy.getMonth() && mes.getFullYear() === hoy.getFullYear();
+
+  const formatHora = (fechaHora) =>
+    new Date(fechaHora).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e0e3ff', backgroundColor: '#fbfbff' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0 }}>🗓️ Calendario de educadoras</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+          <button onClick={() => cambiarMes(-1)} style={{ padding: '0.4rem 0.8rem', border: '1px solid #ddd', borderRadius: '4px', background: 'white', cursor: 'pointer', fontWeight: 600 }}>◀</button>
+          <strong style={{ minWidth: '160px', textAlign: 'center', textTransform: 'capitalize' }}>
+            {mes.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })}
+          </strong>
+          <button onClick={() => cambiarMes(1)} style={{ padding: '0.4rem 0.8rem', border: '1px solid #ddd', borderRadius: '4px', background: 'white', cursor: 'pointer', fontWeight: 600 }}>▶</button>
+        </div>
+      </div>
+
+      {/* Leyenda: color por educadora */}
+      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+        {nombresEducadoras.map((nombre) => (
+          <span key={nombre} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+            <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: colorDe(nombre) }} />
+            {nombre}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+        {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+          <div key={d} style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.8rem', color: '#888', padding: '0.4rem 0' }}>
+            {d}
+          </div>
+        ))}
+        {celdas.map((dia, i) => (
+          <div
+            key={i}
+            style={{
+              minHeight: '84px',
+              borderRadius: '6px',
+              border: dia ? (esHoy(dia) ? '2px solid #667eea' : '1px solid #eee') : 'none',
+              backgroundColor: dia ? 'white' : 'transparent',
+              padding: '0.3rem',
+            }}
+          >
+            {dia && (
+              <>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: esHoy(dia) ? '#667eea' : '#aaa', marginBottom: '0.2rem' }}>
+                  {dia}
+                </div>
+                {(porDia[dia] || []).map((c) => {
+                  const nombre = c.empleado?.persona?.nombres || 'Sin asignar';
+                  return (
+                    <div
+                      key={c.id}
+                      title={`${PROGRAMAS[c.programa] || c.programa} — ${formatHora(c.fechaHora)} — ${nombre}`}
+                      style={{
+                        backgroundColor: colorDe(nombre),
+                        color: 'white',
+                        borderRadius: '4px',
+                        padding: '0.15rem 0.35rem',
+                        fontSize: '0.7rem',
+                        fontWeight: 600,
+                        marginBottom: '0.2rem',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {formatHora(c.fechaHora)} {(PROGRAMAS[c.programa] || c.programa).split(' ')[0]} · {nombre.split(' ')[0]}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------- Seguimiento de faltas: exportar Excel para contacto externo ----------
 // La propietaria descarga la lista de niños que FALTARON (día/semana/mes) con el
 // contacto del tutor a cargo, para dar seguimiento por llamada/WhatsApp fuera del sistema.
@@ -379,6 +496,35 @@ function ProgramarClases() {
 
   const hayFiltros = filtros.programa || filtros.fecha || filtros.empleadoId || filtros.cupo;
 
+  // Exporta a Excel (CSV con BOM UTF-8) lo que muestra la tabla, filtros incluidos
+  const descargarExcel = () => {
+    const encabezado = ['Fecha', 'Día', 'Hora', 'Programa', 'Educadora', 'Cupo ocupado', 'Cupo máximo', 'Estado'];
+    const filas = clasesOrdenadas.map((c) => {
+      const d = new Date(c.fechaHora);
+      const ocupado = c._count?.reservas ?? 0;
+      return [
+        d.toLocaleDateString('es-EC'),
+        d.toLocaleDateString('es-EC', { weekday: 'long' }),
+        d.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }),
+        (PROGRAMAS[c.programa] || c.programa).replace(/^\S+\s/, ''),
+        c.empleado?.persona?.nombres || 'Sin asignar',
+        ocupado,
+        c.cupoMaximo,
+        ocupado >= c.cupoMaximo ? 'LLENA' : 'CON CUPO',
+      ];
+    });
+    const csv = [encabezado, ...filas]
+      .map((fila) => fila.map((celda) => `"${String(celda).replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = `clases_programadas_${new Date().toISOString().slice(0, 10)}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <h3 style={{ marginBottom: '0.5rem' }}>Programar nueva clase</h3>
@@ -421,7 +567,27 @@ function ProgramarClases() {
         </button>
       </form>
 
-      <h3 style={{ marginBottom: '1rem' }}>Clases programadas</h3>
+      <CalendarioMensual clases={clases} />
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0 }}>Clases programadas</h3>
+        <button
+          onClick={descargarExcel}
+          disabled={clasesOrdenadas.length === 0}
+          style={{
+            padding: '0.6rem 1.2rem',
+            backgroundColor: clasesOrdenadas.length ? '#27ae60' : '#ccc',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: clasesOrdenadas.length ? 'pointer' : 'default',
+            fontWeight: 600,
+            fontSize: '0.9rem',
+          }}
+        >
+          📊 Descargar Excel ({clasesOrdenadas.length})
+        </button>
+      </div>
 
       {/* Filtros: programa, fecha, educadora y cupo */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', padding: '1rem', backgroundColor: '#f5f6ff', borderRadius: '8px' }}>
