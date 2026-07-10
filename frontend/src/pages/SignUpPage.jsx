@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { toast } from 'react-toastify';
+import { ThemeToggle } from '../components/ThemeToggle';
 
 export function SignUpPage() {
   const { signUp, loading } = useData();
@@ -39,8 +40,9 @@ export function SignUpPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '2rem', textAlign: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      <ThemeToggle className="theme-toggle-float" />
+      <header className="signup-header">
         <h1>GymboGest</h1>
         <p>Sistema de gestión para Gymboree Play & Music</p>
       </header>
@@ -48,7 +50,7 @@ export function SignUpPage() {
       <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="login-container">
           <h2>Crear una cuenta</h2>
-          <p style={{ color: '#888', fontSize: '0.9rem', margin: '0.5rem 0 1rem' }}>
+          <p className="login-subtitle" style={{ fontSize: '0.9rem' }}>
             La cuenta se crea como <strong>Tutor</strong>. Si tu correo coincide con el
             registrado en recepción, verás a tus hijos al ingresar.
           </p>
@@ -117,17 +119,14 @@ export function SignUpPage() {
             </button>
           </form>
 
-          <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
-            ¿Ya tienes cuenta?{' '}
-            <Link to="/login" style={{ color: '#667eea', fontWeight: 600 }}>
-              Iniciar sesión
-            </Link>
+          <p className="signup-hint">
+            ¿Ya tienes cuenta? <Link to="/login">Iniciar sesión</Link>
           </p>
         </div>
       </main>
 
-      <footer style={{ backgroundColor: '#333', color: 'white', padding: '1.5rem', textAlign: 'center', borderTop: '1px solid #555' }}>
-        <p>&copy; 2026 GymboGest - Gymboree Play & Music Los Chillos</p>
+      <footer>
+        <p>&copy; 2026 GymboGest - Gymboree Play &amp; Music Los Chillos</p>
       </footer>
     </div>
   );

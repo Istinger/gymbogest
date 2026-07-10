@@ -1,7 +1,16 @@
+// RF-01 / CU-01 — Inicio de sesión con redirección por rol (RNF-01).
+// Diseño: panel de marca Gymboree (assets de gymboreeclases.com.ec) + formulario.
+// Mock de referencia: design/login-mock.html
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import { ThemeToggle } from '../components/ThemeToggle';
+import logoGymboree from '../assets/logo-gymboree1.png';
+import fotoBabies from '../assets/babies.jpeg';
+import fotoMusic from '../assets/music.jpeg';
+import fotoArt from '../assets/art.jpeg';
+import fotoPlaylab from '../assets/playlab.jpeg';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -37,15 +46,40 @@ export function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', padding: '2rem', textAlign: 'center' }}>
-        <h1>GymboGest</h1>
-        <p>Sistema de gestión para Gymboree Play & Music</p>
-      </header>
+    <div className="login-page">
+      <ThemeToggle className="theme-toggle-float" />
+      <section className="login-brand" aria-label="Gymboree Play & Music Los Chillos">
+        <img
+          className="login-logo"
+          src={logoGymboree}
+          alt="Gymboree Play & Music"
+          width="313"
+          height="70"
+        />
+        <h1>Aprender jugando empieza aquí</h1>
+        <p>
+          GymboGest — reserva clases, sigue el progreso de tus hijos y gestiona el
+          centro en un solo lugar.
+        </p>
+        <img
+          className="login-photo"
+          src={fotoBabies}
+          alt="Bebé sonriendo en clase Gymboree"
+          width="1000"
+          height="667"
+        />
+        <div className="login-thumbs" aria-hidden="true">
+          <img src={fotoMusic} alt="" width="88" height="88" />
+          <img src={fotoArt} alt="" width="88" height="88" />
+          <img src={fotoPlaylab} alt="" width="88" height="88" />
+        </div>
+      </section>
 
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="login-container">
+      <main className="login-form-panel">
+        <div className="login-card">
           <h2>Iniciar sesión</h2>
+          <p className="login-subtitle">Bienvenido de nuevo. Ingresa tus credenciales.</p>
+
           {error && <div className="error-message">{error}</div>}
 
           <form onSubmit={handleSubmit}>
@@ -54,6 +88,7 @@ export function LoginPage() {
               <input
                 id="email"
                 type="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -67,6 +102,7 @@ export function LoginPage() {
               <input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -80,27 +116,22 @@ export function LoginPage() {
             </button>
           </form>
 
-          <p style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.95rem' }}>
-            ¿No tienes cuenta?{' '}
-            <Link to="/registro" style={{ color: '#667eea', fontWeight: 600 }}>
-              Crear una cuenta
-            </Link>
+          <p className="signup-hint">
+            ¿No tienes cuenta? <Link to="/registro">Crear una cuenta</Link>
           </p>
 
-          <div style={{ marginTop: '1.5rem', padding: '1rem', backgroundColor: '#f9f9f9', borderRadius: '4px', fontSize: '0.9rem', color: '#666' }}>
-            <p><strong>Credenciales de prueba:</strong></p>
-            <p>Admin: admin@gymbo.ec / admin123</p>
-            <p>Propietaria: propietaria@gymbo.ec / propietaria123</p>
-            <p>Recepción: recepcion@gymbo.ec / semilla123</p>
-            <p>Educadora: educadora1@gymbo.ec / semilla123</p>
-            <p>Tutor: tutor@gymbo.ec / semilla123</p>
-          </div>
+          <details className="test-creds">
+            <summary>Credenciales de prueba</summary>
+            <div>
+              <p>Admin: <code>admin@gymbo.ec / admin123</code></p>
+              <p>Propietaria: <code>propietaria@gymbo.ec / propietaria123</code></p>
+              <p>Recepción: <code>recepcion@gymbo.ec / semilla123</code></p>
+              <p>Educadora: <code>educadora1@gymbo.ec / semilla123</code></p>
+              <p>Tutor: <code>tutor@gymbo.ec / semilla123</code></p>
+            </div>
+          </details>
         </div>
       </main>
-
-      <footer style={{ backgroundColor: '#333', color: 'white', padding: '1.5rem', textAlign: 'center', borderTop: '1px solid #555' }}>
-        <p>&copy; 2026 GymboGest - Gymboree Play & Music Los Chillos</p>
-      </footer>
     </div>
   );
 }
