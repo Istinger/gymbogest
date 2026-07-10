@@ -2,6 +2,7 @@
 // Wireframe 4 del Avance 7: lista de clase + registro de asistencia + progreso
 import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { toast } from 'react-toastify';
 
@@ -24,8 +25,12 @@ const ESTADOS_ASISTENCIA = [
 const AREAS = ['motor', 'cognitivo', 'social', 'emocional'];
 
 export function EducadoraPanel() {
+  const { rol } = useAuth();
   const { clases, getClases } = useData();
   const [claseId, setClaseId] = useState(null);
+  // El backend ya filtra: una EDUCADORA solo recibe SUS clases;
+  // Recepción y Propietaria reciben las de todas las educadoras.
+  const esEducadora = rol === 'EDUCADORA';
 
   useEffect(() => {
     getClases();
@@ -61,7 +66,9 @@ export function EducadoraPanel() {
         </div>
 
         <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem' }}>
-          <h3 style={{ marginBottom: '1rem' }}>Educadoras y sus clases asignadas</h3>
+          <h3 style={{ marginBottom: '1rem' }}>
+            {esEducadora ? 'Mis clases asignadas' : 'Educadoras y sus clases asignadas'}
+          </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
             {educadoras.map((edu) => (
               <div

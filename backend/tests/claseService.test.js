@@ -51,6 +51,24 @@ describe('RF-02: crear clase con cupo por defecto', () => {
   });
 });
 
+describe('RNF-01: autorización a nivel de dato al listar clases', () => {
+  test('con empleadoId filtra solo las clases de esa educadora', async () => {
+    const prisma = crearPrismaFalso();
+    const servicio = crearClaseService(prisma);
+    await servicio.listarClases({ empleadoId: 7 });
+    const where = prisma.clase.findMany.mock.calls[0][0].where;
+    expect(where.empleadoId).toBe(7);
+  });
+
+  test('sin empleadoId no aplica el filtro (Recepción/Propietaria ven todas)', async () => {
+    const prisma = crearPrismaFalso();
+    const servicio = crearClaseService(prisma);
+    await servicio.listarClases({});
+    const where = prisma.clase.findMany.mock.calls[0][0].where;
+    expect(where.empleadoId).toBeUndefined();
+  });
+});
+
 describe('RF-02: actualizar clase respeta el tope de cupo', () => {
   test('rechaza subir el cupo por encima de 9 al editar', async () => {
     const prisma = crearPrismaFalso();

@@ -34,13 +34,16 @@ function crearClaseService(prisma) {
     });
   }
 
-  async function listarClases({ desde, hasta } = {}) {
+  // empleadoId (opcional): autorización a nivel de DATO — una EDUCADORA
+  // solo lista SUS clases asignadas (mismo patrón que progresoService.esNinoDelTutor)
+  async function listarClases({ desde, hasta, empleadoId } = {}) {
     return prisma.clase.findMany({
       where: {
         fechaHora: {
           ...(desde ? { gte: new Date(desde) } : {}),
           ...(hasta ? { lte: new Date(hasta) } : {}),
         },
+        ...(empleadoId ? { empleadoId } : {}),
       },
       include: {
         empleado: { include: { persona: true } },

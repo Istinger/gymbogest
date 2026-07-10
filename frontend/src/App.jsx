@@ -29,7 +29,8 @@ function AppRoutes() {
       <Route path="/registro" element={token ? <Navigate to="/" /> : <SignUpPage />} />
       <Route path="/panel/recepcion" element={<PrivateRoute><RecepcionPanel /></PrivateRoute>} />
       <Route path="/panel/tutor" element={<PrivateRoute><TutorPanel /></PrivateRoute>} />
-      <Route path="/panel/educadora" element={<PrivateRoute><EducadoraPanel /></PrivateRoute>} />
+      {/* Panel Educadora: visible para Educadora, Recepción y Propietaria — nunca Tutor */}
+      <Route path="/panel/educadora" element={<PrivateRoute roles={['EDUCADORA', 'RECEPCION', 'PROPIETARIA']}><EducadoraPanel /></PrivateRoute>} />
       <Route path="/panel/propietaria" element={<PrivateRoute><PropietariaPanel /></PrivateRoute>} />
       <Route path="/panel/admin" element={<PrivateRoute><AdminPanel /></PrivateRoute>} />
       <Route path="/" element={token ? <Navigate to={RUTA_POR_ROL[rol] || '/login'} /> : <Navigate to="/login" />} />

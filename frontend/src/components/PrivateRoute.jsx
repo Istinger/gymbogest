@@ -1,8 +1,10 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-export function PrivateRoute({ children }) {
-  const { token, loading } = useAuth();
+// roles (opcional): lista blanca de roles que pueden ver la ruta.
+// Si el rol autenticado no está en la lista, se lo redirige a SU panel ("/").
+export function PrivateRoute({ children, roles }) {
+  const { token, rol, loading } = useAuth();
 
   if (loading) {
     return (
@@ -15,6 +17,10 @@ export function PrivateRoute({ children }) {
 
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (roles && !roles.includes(rol)) {
+    return <Navigate to="/" replace />;
   }
 
   return children;

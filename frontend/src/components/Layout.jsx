@@ -31,7 +31,8 @@ function ThemeToggle() {
 const ROLES = [
   { rol: 'PROPIETARIA', ruta: 'propietaria', label: 'Propietaria' },
   { rol: 'RECEPCION', ruta: 'recepcion', label: 'Recepción' },
-  { rol: 'EDUCADORA', ruta: 'educadora', label: 'Educadora' },
+  // Educadora: también accesible para Recepción y Propietaria, nunca para Tutor
+  { rol: 'EDUCADORA', ruta: 'educadora', label: 'Educadora', ocultoPara: ['TUTOR'] },
   { rol: 'TUTOR', ruta: 'tutor', label: 'Tutor' },
 ];
 
@@ -75,7 +76,7 @@ export function Layout({ children }) {
 
       <nav className="role-nav" aria-label="Paneles por rol">
         <div className="role-nav-inner">
-          {ROLES.map((r) => (
+          {ROLES.filter((r) => !r.ocultoPara?.includes(rol)).map((r) => (
             <button
               key={r.rol}
               className={`role-tab${rol === r.rol ? ' active' : ''}`}
