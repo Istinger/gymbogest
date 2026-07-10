@@ -18,6 +18,13 @@ router.get('/canal', verificarToken, permitirRoles('PROPIETARIA'), async (req, r
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/indicadores/faltas?desde=&hasta= — seguimiento de inasistencias
+// (niño + clase + contacto del tutor) para exportar a Excel (T22)
+router.get('/faltas', verificarToken, permitirRoles('PROPIETARIA'), async (req, res) => {
+  try { res.json(await servicio.faltasParaSeguimiento(req.query)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // GET /api/indicadores/conversion — clases de prueba que se convirtieron
 router.get('/conversion', verificarToken, permitirRoles('PROPIETARIA'), async (_req, res) => {
   try { res.json(await servicio.conversionClasePrueba()); }

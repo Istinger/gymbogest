@@ -85,6 +85,38 @@ function crearIndicadorService(prisma) {
     return Object.values(porClase);
   }
 
+  // Seguimiento de faltas: niños que FALTARON en el rango, con el contacto
+  // del tutor a cargo — alimenta el Excel de seguimiento externo (llamada/WhatsApp)
+  async function faltasParaSeguimiento({ desde, hasta } = {}) {
+    const { inicio, fin } = rangoDefault({ desde, hasta });
+    const faltas = await prisma.asistencia.findMany({
+      where: { estado: 'FALTO', fecha: { gte: inicio, lte: fin } },
+      include: {
+        nino: {
+          include: {
+            familia: { include: { tutores: { include: { persona: true } } } },
+          },
+        },
+        clase: { include: { empleado: { include: { persona: true } } } },
+      },
+      orderBy: { fecha: 'desc' },
+    });
+    return faltas.map((f) => {
+      const tutor = f.nino.familia.tutores[0];
+      return {
+        fecha: f.fecha,
+        nino: f.nino.nombres,
+        programa: f.clase.programa,
+        claseFechaHora: f.clase.fechaHora,
+        educadora: f.clase.empleado?.persona?.nombres || '',
+        tutor: tutor?.persona?.nombres || '',
+        parentesco: tutor?.parentesco || '',
+        telefono: tutor?.persona?.telefono || '',
+        correo: tutor?.persona?.correo || '',
+      };
+    });
+  }
+
   // Tablero consolidado — lo que consume el wireframe del panel de Propietaria
   async function tablero({ desde, hasta } = {}) {
     const [activos, inscritos, porCanal, conversion, asistencia] = await Promise.all([
@@ -97,7 +129,7 @@ function crearIndicadorService(prisma) {
     return { ninosActivos: activos, inscritos, inscripcionesPorCanal: porCanal, conversion, asistenciaPorClase: asistencia };
   }
 
-  return { ninosActivos, inscritosPorPeriodo, inscripcionesPorCanal, conversionClasePrueba, asistenciaPorClase, tablero };
+  return { ninosActivos, inscritosPorPeriodo, inscripcionesPorCanal, conversionClasePrueba, asistenciaPorClase, faltasParaSeguimiento, tablero };
 }
 
 module.exports = { crearIndicadorService };

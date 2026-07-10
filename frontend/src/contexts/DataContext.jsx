@@ -139,6 +139,16 @@ export function DataProvider({ children }) {
     }, null, false);
   }, [axiosInstance, handleRequest]);
 
+  // Seguimiento de faltas para el Excel (Propietaria)
+  const getFaltas = useCallback(async (filtros = {}) => {
+    return handleRequest('getFaltas', async () => {
+      const { data } = await axiosInstance.get('/indicadores/faltas', {
+        params: filtros,
+      });
+      return data;
+    }, null, false);
+  }, [axiosInstance, handleRequest]);
+
   const getCorporativos = useCallback(async () => {
     return handleRequest('getCorporativos', async () => {
       const { data } = await axiosInstance.get('/corporativos');
@@ -263,6 +273,7 @@ export function DataProvider({ children }) {
     getProgresos,
     createProgreso,
     getIndicadores,
+    getFaltas,
     getCorporativos,
     createCorporativo,
     updateCorporativo,

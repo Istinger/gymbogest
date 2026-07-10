@@ -197,6 +197,8 @@ button {
   align-items: center;
   background: none;
   border: none;
+  text-decoration: none; /* NavLink renderiza <a>: sin subrayado de enlace */
+  cursor: pointer;
   padding: 12px 16px;
   min-height: 48px;
   white-space: nowrap;

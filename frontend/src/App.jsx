@@ -27,12 +27,12 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={token ? <Navigate to="/" /> : <LoginPage />} />
       <Route path="/registro" element={token ? <Navigate to="/" /> : <SignUpPage />} />
-      <Route path="/panel/recepcion" element={<PrivateRoute><RecepcionPanel /></PrivateRoute>} />
-      <Route path="/panel/tutor" element={<PrivateRoute><TutorPanel /></PrivateRoute>} />
+      <Route path="/panel/recepcion" element={<PrivateRoute roles={['RECEPCION', 'PROPIETARIA', 'EDUCADORA']}><RecepcionPanel /></PrivateRoute>} />
+      <Route path="/panel/tutor" element={<PrivateRoute roles={['TUTOR']}><TutorPanel /></PrivateRoute>} />
       {/* Panel Educadora: visible para Educadora, Recepción y Propietaria — nunca Tutor */}
       <Route path="/panel/educadora" element={<PrivateRoute roles={['EDUCADORA', 'RECEPCION', 'PROPIETARIA']}><EducadoraPanel /></PrivateRoute>} />
-      <Route path="/panel/propietaria" element={<PrivateRoute><PropietariaPanel /></PrivateRoute>} />
-      <Route path="/panel/admin" element={<PrivateRoute><AdminPanel /></PrivateRoute>} />
+      <Route path="/panel/propietaria" element={<PrivateRoute roles={['PROPIETARIA']}><PropietariaPanel /></PrivateRoute>} />
+      <Route path="/panel/admin" element={<PrivateRoute roles={['ADMIN']}><AdminPanel /></PrivateRoute>} />
       <Route path="/" element={token ? <Navigate to={RUTA_POR_ROL[rol] || '/login'} /> : <Navigate to="/login" />} />
     </Routes>
   );

@@ -172,6 +172,8 @@ function TableroIndicadores() {
         )}
       </div>
 
+      <SeguimientoFaltas />
+
       <h3 style={{ marginBottom: '1rem' }}>Asistencia por clase</h3>
       {(tablero.asistenciaPorClase || []).length === 0 ? (
         <p style={{ color: '#999' }}>Sin registros de asistencia en el último mes</p>
@@ -192,6 +194,128 @@ function TableroIndicadores() {
                 <td style={{ padding: '0.6rem', color: '#27ae60', fontWeight: 600 }}>{a.asistio}</td>
                 <td style={{ padding: '0.6rem', color: '#e74c3c', fontWeight: 600 }}>{a.falto}</td>
                 <td style={{ padding: '0.6rem', color: '#f39c12', fontWeight: 600 }}>{a.prueba}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// ---------- Seguimiento de faltas: exportar Excel para contacto externo ----------
+// La propietaria descarga la lista de niños que FALTARON (día/semana/mes) con el
+// contacto del tutor a cargo, para dar seguimiento por llamada/WhatsApp fuera del sistema.
+function SeguimientoFaltas() {
+  const { getFaltas } = useData();
+  const [periodo, setPeriodo] = useState('semana');
+  const [faltas, setFaltas] = useState([]);
+
+  // Rango de fechas según el periodo elegido
+  const rangoDelPeriodo = useCallback((p) => {
+    const hasta = new Date();
+    const desde = new Date();
+    if (p === 'dia') desde.setHours(0, 0, 0, 0);
+    if (p === 'semana') desde.setDate(desde.getDate() - 7);
+    if (p === 'mes') desde.setMonth(desde.getMonth() - 1);
+    return { desde: desde.toISOString(), hasta: hasta.toISOString() };
+  }, []);
+
+  useEffect(() => {
+    getFaltas(rangoDelPeriodo(periodo)).then((data) => data && setFaltas(data));
+  }, [periodo, getFaltas, rangoDelPeriodo]);
+
+  const descargarExcel = () => {
+    // CSV con BOM UTF-8 y separador ";" — Excel lo abre directo con doble clic
+    const encabezado = ['Fecha falta', 'Niño', 'Clase', 'Horario de la clase', 'Educadora', 'Tutor a cargo', 'Parentesco', 'Teléfono', 'Correo'];
+    const filas = faltas.map((f) => [
+      new Date(f.fecha).toLocaleDateString('es-EC'),
+      f.nino,
+      PROGRAMAS[f.programa]?.replace(/^\S+\s/, '') || f.programa, // sin emoji
+      new Date(f.claseFechaHora).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' }),
+      f.educadora,
+      f.tutor,
+      f.parentesco,
+      f.telefono,
+      f.correo,
+    ]);
+    const csv = [encabezado, ...filas]
+      .map((fila) => fila.map((celda) => `"${String(celda).replace(/"/g, '""')}"`).join(';'))
+      .join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = `seguimiento_faltas_${periodo}_${new Date().toISOString().slice(0, 10)}.csv`;
+    enlace.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const ETIQUETAS = { dia: 'Hoy', semana: 'Última semana', mes: 'Último mes' };
+
+  return (
+    <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e0e3ff', backgroundColor: '#f5f6ff' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.5rem' }}>
+        <div>
+          <h3 style={{ margin: 0 }}>📥 Seguimiento de faltas (Excel)</h3>
+          <p style={{ color: '#888', fontSize: '0.85rem', margin: '0.3rem 0 0' }}>
+            Niños que faltaron a clases con el contacto de su tutor, para dar seguimiento por llamada o WhatsApp.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <select
+            value={periodo}
+            onChange={(e) => setPeriodo(e.target.value)}
+            style={{ padding: '0.6rem', borderRadius: '4px', border: '1px solid #ddd', fontSize: '0.9rem' }}
+          >
+            {Object.entries(ETIQUETAS).map(([valor, etiqueta]) => (
+              <option key={valor} value={valor}>{etiqueta}</option>
+            ))}
+          </select>
+          <button
+            onClick={descargarExcel}
+            disabled={faltas.length === 0}
+            style={{
+              padding: '0.6rem 1.2rem',
+              backgroundColor: faltas.length ? '#27ae60' : '#ccc',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: faltas.length ? 'pointer' : 'default',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+            }}
+          >
+            📊 Descargar Excel ({faltas.length})
+          </button>
+        </div>
+      </div>
+
+      {faltas.length === 0 ? (
+        <p style={{ color: '#999', fontSize: '0.9rem', margin: '0.5rem 0 0' }}>
+          Sin faltas registradas en el periodo "{ETIQUETAS[periodo]}" 🎉
+        </p>
+      ) : (
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem', fontSize: '0.88rem' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #dde', textAlign: 'left' }}>
+              <th style={{ padding: '0.5rem' }}>Fecha</th>
+              <th style={{ padding: '0.5rem' }}>Niño</th>
+              <th style={{ padding: '0.5rem' }}>Clase</th>
+              <th style={{ padding: '0.5rem' }}>Tutor a cargo</th>
+              <th style={{ padding: '0.5rem' }}>Teléfono</th>
+              <th style={{ padding: '0.5rem' }}>Correo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {faltas.map((f, i) => (
+              <tr key={i} style={{ borderBottom: '1px solid #e8e8f5' }}>
+                <td style={{ padding: '0.5rem' }}>{new Date(f.fecha).toLocaleDateString('es-EC')}</td>
+                <td style={{ padding: '0.5rem', fontWeight: 600 }}>{f.nino}</td>
+                <td style={{ padding: '0.5rem' }}>{PROGRAMAS[f.programa] || f.programa}</td>
+                <td style={{ padding: '0.5rem' }}>{f.tutor} <span style={{ color: '#999' }}>({f.parentesco})</span></td>
+                <td style={{ padding: '0.5rem' }}>{f.telefono || '—'}</td>
+                <td style={{ padding: '0.5rem' }}>{f.correo || '—'}</td>
               </tr>
             ))}
           </tbody>

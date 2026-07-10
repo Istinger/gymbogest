@@ -7,7 +7,7 @@ const { crearAgendaService } = require('../services/agendaService');
 const servicio = crearAgendaService(prisma);
 
 // GET /api/agenda?fecha=YYYY-MM-DD
-router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'), async (req, res) => {
+router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'EDUCADORA'), async (req, res) => {
   try {
     const fecha = req.query.fecha || new Date().toISOString().slice(0, 10);
     res.json(await servicio.agendaDelDia(fecha));

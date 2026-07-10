@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, NavLink } from 'react-router-dom';
 
 function ThemeToggle() {
   const [theme, setTheme] = useState(document.documentElement.dataset.theme || 'light');
@@ -29,12 +29,21 @@ function ThemeToggle() {
 }
 
 const ROLES = [
+  { rol: 'ADMIN', ruta: 'admin', label: 'Administración' },
   { rol: 'PROPIETARIA', ruta: 'propietaria', label: 'Propietaria' },
   { rol: 'RECEPCION', ruta: 'recepcion', label: 'Recepción' },
-  // Educadora: también accesible para Recepción y Propietaria, nunca para Tutor
-  { rol: 'EDUCADORA', ruta: 'educadora', label: 'Educadora', ocultoPara: ['TUTOR'] },
+  { rol: 'EDUCADORA', ruta: 'educadora', label: 'Educadora' },
   { rol: 'TUTOR', ruta: 'tutor', label: 'Tutor' },
 ];
+
+// Qué paneles ve cada rol en la barra de navegación
+const NAV_POR_ROL = {
+  ADMIN: ['ADMIN'],
+  PROPIETARIA: ['PROPIETARIA', 'RECEPCION', 'EDUCADORA'],
+  RECEPCION: ['RECEPCION'],
+  EDUCADORA: ['RECEPCION', 'EDUCADORA'],
+  TUTOR: ['TUTOR'],
+};
 
 export function Layout({ children }) {
   const { rol, logout } = useAuth();
@@ -76,15 +85,15 @@ export function Layout({ children }) {
 
       <nav className="role-nav" aria-label="Paneles por rol">
         <div className="role-nav-inner">
-          {ROLES.filter((r) => !r.ocultoPara?.includes(rol)).map((r) => (
-            <button
+          {/* NavLink marca la pestaña activa según la RUTA actual (no el rol del usuario) */}
+          {ROLES.filter((r) => (NAV_POR_ROL[rol] || [rol]).includes(r.rol)).map((r) => (
+            <NavLink
               key={r.rol}
-              className={`role-tab${rol === r.rol ? ' active' : ''}`}
-              aria-current={rol === r.rol ? 'page' : undefined}
-              onClick={() => navigate(`/panel/${r.ruta}`)}
+              to={`/panel/${r.ruta}`}
+              className={({ isActive }) => `role-tab${isActive ? ' active' : ''}`}
             >
               {r.label}
-            </button>
+            </NavLink>
           ))}
         </div>
       </nav>

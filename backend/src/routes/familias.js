@@ -8,7 +8,7 @@ const servicio = crearFamiliaService(prisma);
 
 // POST /api/familias — T04 (+ T05 si la cédula ya existe)
 // La inscripción la hace Recepción en el local, o el propio Tutor desde la web (HF-1)
-router.post('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'TUTOR'),
+router.post('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'EDUCADORA', 'TUTOR'),
   async (req, res) => {
     try {
       const resultado = await servicio.registrarFamilia({ ...req.body, usuarioId: req.usuario.id });
@@ -66,7 +66,7 @@ router.get('/mis-ninos', verificarToken, permitirRoles('TUTOR'),
   });
 
 // GET /api/familias — T06 (listado para el panel de Recepción)
-router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
+router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'EDUCADORA'),
   async (_req, res) => {
     try { res.json(await servicio.listarFamilias()); }
     catch (e) { res.status(500).json({ error: e.message }); }
