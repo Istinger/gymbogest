@@ -16,7 +16,7 @@ export function RecepcionPanel() {
           </p>
         </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '1.5rem' }}>
+        <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem' }}>
           <Inscripciones />
           <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid #eee' }} />
           <AsignarClase />

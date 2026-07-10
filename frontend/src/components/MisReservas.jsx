@@ -137,7 +137,7 @@ export function MisReservas() {
           <div
             key={reserva.id}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--color-surface)',
               borderRadius: '8px',
               border: '1px solid #eee',
               overflow: 'hidden',
@@ -272,7 +272,7 @@ function ReagendarModal({ reserva, onReagendar, onClose, isLoading }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--color-surface)',
           borderRadius: '8px',
           padding: '1.5rem',
           width: '90%',

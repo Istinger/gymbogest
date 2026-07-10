@@ -63,7 +63,7 @@ export function AgendaDelDia() {
               <div
                 key={clase.id}
                 style={{
-                  backgroundColor: 'white',
+                  backgroundColor: 'var(--color-surface)',
                   borderRadius: '8px',
                   border: '1px solid #eee',
                   padding: '1.5rem',

@@ -52,3 +52,6 @@ database/*.sql
 *.sql.bak
 
 CLAUDE.md
+AGENTS.md
+/graphify-out
+/design

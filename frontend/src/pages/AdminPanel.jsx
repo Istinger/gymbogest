@@ -60,7 +60,7 @@ export function AdminPanel() {
           ))}
         </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '1.5rem' }}>
+        <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem' }}>
           {seccion === 'usuarios' && <AdminUsuarios />}
           {seccion === 'accesos' && <LogsIngreso />}
         </div>
@@ -236,7 +236,7 @@ function EditarUsuarioModal({ usuario, onClose, onGuardado }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'white', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '440px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '440px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>✏️ Editar cuenta</h3>

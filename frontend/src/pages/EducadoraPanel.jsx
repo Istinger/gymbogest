@@ -60,7 +60,7 @@ export function EducadoraPanel() {
           </p>
         </div>
 
-        <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '1.5rem' }}>
+        <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem' }}>
           <h3 style={{ marginBottom: '1rem' }}>Educadoras y sus clases asignadas</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
             {educadoras.map((edu) => (
@@ -320,7 +320,7 @@ function ProgresoModal({ nino, onClose }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: 'white',
+          backgroundColor: 'var(--color-surface)',
           borderRadius: '8px',
           padding: '1.5rem',
           width: '90%',

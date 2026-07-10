@@ -134,7 +134,7 @@ export function Inscripciones() {
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'white' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: 'var(--color-surface)' }}>
             <thead>
               <tr style={{ backgroundColor: '#f0f0f0', borderBottom: '2px solid #ddd' }}>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Niños</th>
