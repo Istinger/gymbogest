@@ -20,9 +20,27 @@ const ROLES = ['ADMIN', 'PROPIETARIA', 'RECEPCION', 'EDUCADORA', 'TUTOR'];
 const ROLES_PROTEGIDOS = ['ADMIN', 'PROPIETARIA'];
 const ROLES_ASIGNABLES = ['RECEPCION', 'EDUCADORA', 'TUTOR'];
 
+// Solo se aceptan correos de proveedores conocidos (evita dominios inventados
+// o con errores de tipeo tipo "gmial.com" al crear o editar cuentas).
+const DOMINIOS_PERMITIDOS = [
+  'gmail.com', 'googlemail.com',
+  'hotmail.com', 'hotmail.es',
+  'outlook.com', 'outlook.es',
+  'live.com', 'msn.com',
+  'yahoo.com', 'yahoo.es',
+  'icloud.com', 'me.com',
+  'proton.me', 'protonmail.com',
+];
+
 function validarCorreo(correo) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo || '')) {
     throw new UsuarioInvalidoError('El correo no tiene un formato válido');
+  }
+  const dominio = correo.split('@')[1].toLowerCase();
+  if (!DOMINIOS_PERMITIDOS.includes(dominio)) {
+    throw new UsuarioInvalidoError(
+      `El correo debe ser de un proveedor conocido (${DOMINIOS_PERMITIDOS.join(', ')})`,
+    );
   }
 }
 
@@ -191,5 +209,5 @@ function crearUsuarioService(prisma) {
 
 module.exports = {
   crearUsuarioService, UsuarioInvalidoError, CorreoDuplicadoError, RolProtegidoError,
-  ROLES, ROLES_ASIGNABLES,
+  ROLES, ROLES_ASIGNABLES, DOMINIOS_PERMITIDOS,
 };

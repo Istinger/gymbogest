@@ -80,8 +80,11 @@ export function SignUpPage() {
                 onChange={handleChange}
                 required
                 disabled={loading}
-                placeholder="usuario@ejemplo.com"
+                placeholder="usuario@gmail.com"
               />
+              <p style={{ fontSize: '0.82rem', color: '#888', marginTop: '0.3rem' }}>
+                Debe ser de un proveedor conocido: Gmail, Hotmail, Outlook, Yahoo, iCloud…
+              </p>
             </div>
 
             <div className="form-group">
