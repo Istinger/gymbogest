@@ -15,6 +15,7 @@ export function Inscripciones() {
   const [busqueda, setBusqueda] = useState('');
   const [limite, setLimite] = useState(10); // últimos N registrados (5, 10 o todas)
   const [familiaEditar, setFamiliaEditar] = useState(null); // extensión CU-01: corregir typos
+  const [familiaPaquetes, setFamiliaPaquetes] = useState(null); // extensión RF-03: contratar/ver paquetes
   const [formData, setFormData] = useState({
     nombreTutor: '',
     cedulaTutor: '',
@@ -211,6 +212,7 @@ export function Inscripciones() {
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Cédula</th>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Contacto</th>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Canal</th>
+                <th style={{ padding: '1rem', textAlign: 'left' }}>Paquete</th>
                 <th style={{ padding: '1rem', textAlign: 'left' }}></th>
               </tr>
             </thead>
@@ -257,7 +259,31 @@ export function Inscripciones() {
                       <div style={{ color: '#888' }}>{tutor?.persona?.telefono || ''}</div>
                     </td>
                     <td style={{ padding: '1rem' }}>{familia.canalOrigen}</td>
-                    <td style={{ padding: '1rem' }}>
+                    <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
+                      {/* Solo LECTURA para Recepción: el ajuste de saldo es de la Propietaria */}
+                      {familia.paquetes?.length ? (
+                        familia.paquetes.map((p) => (
+                          <div key={p.id} style={{ marginBottom: '0.2rem', whiteSpace: 'nowrap' }}>
+                            {p.tipo === 'PRUEBA_GRATIS' ? (
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--color-brand, #B45309)', border: '1px solid currentColor', borderRadius: '999px', padding: '0 0.45rem', marginRight: '0.35rem' }}>PRUEBA</span>
+                            ) : (
+                              <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{p.tipo} · </span>
+                            )}
+                            {p.saldoClases} clase{p.saldoClases !== 1 ? 's' : ''}
+                          </div>
+                        ))
+                      ) : (
+                        <span style={{ color: '#999' }}>Sin paquete</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '1rem', whiteSpace: 'nowrap' }}>
+                      <button
+                        onClick={() => setFamiliaPaquetes(familia)}
+                        title="Contratar un paquete del catálogo para esta familia"
+                        style={{ padding: '0.4rem 0.8rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'var(--color-bg)', color: 'var(--color-fg)', fontSize: '0.85rem', fontWeight: 600, marginRight: '0.4rem' }}
+                      >
+                        📦 Paquetes
+                      </button>
                       <button
                         onClick={() => setFamiliaEditar(familia)}
                         title="Corregir datos de la inscripción"
@@ -279,6 +305,14 @@ export function Inscripciones() {
           familia={familiaEditar}
           onClose={() => setFamiliaEditar(null)}
           onGuardado={() => { setFamiliaEditar(null); getFamilias(); }}
+        />
+      )}
+
+      {familiaPaquetes && (
+        <PaquetesFamiliaModal
+          familia={familiaPaquetes}
+          onClose={() => setFamiliaPaquetes(null)}
+          onGuardado={() => { setFamiliaPaquetes(null); getFamilias(); }}
         />
       )}
     </div>
@@ -456,6 +490,170 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
             {loading ? 'Guardando...' : 'Guardar correcciones'}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+// Extensión RF-03: paquetes de una familia.
+// Recepción CONTRATA del catálogo activo (los valores se copian de la plantilla,
+// pago opcional) y VE los contratados; el ajuste manual de saldo es SOLO de la
+// PROPIETARIA (el saldo es dinero en especie — el backend da 403 al resto).
+function PaquetesFamiliaModal({ familia, onClose, onGuardado }) {
+  const { rol } = useAuth();
+  const { getPaquetesCatalogo, contratarPaquete, ajustarPaquete, loading } = useData();
+  const esPropietaria = rol === 'PROPIETARIA';
+
+  const [catalogo, setCatalogo] = useState([]);
+  const [seleccion, setSeleccion] = useState('');
+  const [conPago, setConPago] = useState(false);
+  const [saldos, setSaldos] = useState({}); // ajustes de la Propietaria: paqueteId → saldo
+
+  useEffect(() => {
+    getPaquetesCatalogo().then((data) => {
+      // la API ya limita a activos para Recepción; se filtra igual por si el rol es Propietaria
+      setCatalogo((data || []).filter((p) => p.activo));
+    });
+  }, [getPaquetesCatalogo]);
+
+  const plantilla = catalogo.find((p) => p.id === Number(seleccion));
+  const sinPrecio = plantilla && (plantilla.precio === null || plantilla.precio === undefined);
+
+  const handleContratar = async (e) => {
+    e.preventDefault();
+    if (!seleccion) return;
+    try {
+      await contratarPaquete(familia.id, { paqueteCatalogoId: Number(seleccion), conPago });
+      onGuardado();
+    } catch (err) {
+      // Error ya notificado por toast en DataContext
+    }
+  };
+
+  const handleAjustar = async (paquete) => {
+    const nuevoSaldo = saldos[paquete.id];
+    if (nuevoSaldo === undefined || Number(nuevoSaldo) === paquete.saldoClases) return;
+    try {
+      await ajustarPaquete(paquete.id, { saldoClases: Number(nuevoSaldo) });
+      onGuardado();
+    } catch (err) {
+      // Error ya notificado por toast en DataContext
+    }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '520px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3 style={{ margin: 0 }}>📦 Paquetes de la familia</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
+        </div>
+
+        {/* Paquetes contratados: Recepción solo LEE; la Propietaria ajusta el saldo */}
+        <h4 style={{ marginBottom: '0.6rem' }}>Contratados</h4>
+        {familia.paquetes?.length ? (
+          familia.paquetes.map((p) => (
+            <div
+              key={p.id}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', padding: '0.5rem 0.7rem', border: '1px solid var(--color-border)', borderRadius: '6px', marginBottom: '0.5rem', fontSize: '0.9rem' }}
+            >
+              <span style={{ flex: 1, textTransform: 'capitalize', fontWeight: 600 }}>
+                {p.tipo === 'PRUEBA_GRATIS' ? '🎁 Prueba gratis' : p.tipo}
+                <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 400, color: 'var(--color-muted, #888)' }}>
+                  {p.clasesPorSemana} clase{p.clasesPorSemana !== 1 ? 's' : ''}/semana
+                </span>
+              </span>
+              {esPropietaria ? (
+                <>
+                  <label style={{ fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+                    Saldo
+                    <input
+                      type="number"
+                      min="0"
+                      value={saldos[p.id] ?? p.saldoClases}
+                      onChange={(e) => setSaldos((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                      disabled={loading}
+                      style={{ width: '4.5rem', minHeight: '38px', padding: '0 0.4rem', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-fg)' }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAjustar(p)}
+                    disabled={loading || saldos[p.id] === undefined || Number(saldos[p.id]) === p.saldoClases}
+                    title="Ajuste manual del saldo (queda auditado)"
+                    style={{ padding: '0.35rem 0.7rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'var(--color-bg)', color: 'var(--color-fg)', fontSize: '0.8rem', fontWeight: 600 }}
+                  >
+                    Ajustar
+                  </button>
+                </>
+              ) : (
+                <span
+                  title="El saldo lo mueve el sistema al reservar/cancelar; el ajuste manual es solo de la Propietaria"
+                  style={{ fontWeight: 700 }}
+                >
+                  {p.saldoClases} clase{p.saldoClases !== 1 ? 's' : ''} 🔒
+                </span>
+              )}
+            </div>
+          ))
+        ) : (
+          <p style={{ color: '#999', fontSize: '0.9rem' }}>Esta familia aún no tiene paquetes.</p>
+        )}
+        {!esPropietaria && familia.paquetes?.length > 0 && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--color-muted, #888)', marginTop: '-0.2rem' }}>
+            🔒 El saldo solo puede ajustarlo la Propietaria.
+          </p>
+        )}
+
+        {/* Contratar del catálogo (Recepción y Propietaria) */}
+        <h4 style={{ margin: '1.2rem 0 0.6rem' }}>Contratar del catálogo</h4>
+        {catalogo.length === 0 ? (
+          <p style={{ color: '#999', fontSize: '0.9rem' }}>
+            No hay paquetes activos en el catálogo. La Propietaria los crea en su panel (📦 Paquetes).
+          </p>
+        ) : (
+          <form onSubmit={handleContratar}>
+            <div className="form-group">
+              <label>Paquete</label>
+              <select
+                value={seleccion}
+                onChange={(e) => { setSeleccion(e.target.value); setConPago(false); }}
+                required
+                disabled={loading}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-fg)' }}
+              >
+                <option value="">— Elegir del catálogo —</option>
+                {catalogo.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre} · {p.saldoClases} clases ({p.clasesPorSemana}/sem)
+                    {p.precio != null ? ` · $${p.precio}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem', margin: '0.3rem 0 0.8rem', opacity: sinPrecio ? 0.5 : 1 }}
+              title={sinPrecio ? 'Este paquete no tiene precio en el catálogo: registra el pago por separado' : ''}
+            >
+              <input
+                type="checkbox"
+                checked={conPago}
+                onChange={(e) => setConPago(e.target.checked)}
+                disabled={loading || !plantilla || sinPrecio}
+              />
+              Registrar el pago ahora{plantilla?.precio != null ? ` ($${plantilla.precio}, comprobante Dátil)` : ''}
+            </label>
+            <button type="submit" className="btn" disabled={loading || !seleccion}>
+              {loading ? 'Contratando...' : 'Contratar paquete'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

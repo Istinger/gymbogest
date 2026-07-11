@@ -103,6 +103,36 @@ router.put('/nino/:ninoId', verificarToken, permitirRoles('RECEPCION', 'PROPIETA
     }
   });
 
+// POST /api/familias/:id/paquetes — contratar un paquete del catálogo (extensión RF-03).
+// Recepción vende: elige SOLO del catálogo activo (los valores se copian de la
+// plantilla). Pago opcional (conPago) — se cobra por fuera si no se marca.
+router.post('/:id/paquetes', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
+  async (req, res) => {
+    try {
+      const resultado = await servicio.contratarPaquete(req.params.id, req.body, {
+        usuarioId: req.usuario.id,
+      });
+      res.status(201).json(resultado);
+    } catch (e) {
+      if (e instanceof ValidacionError) return res.status(400).json({ error: e.message });
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+// PUT /api/familias/paquete/:paqueteId — ajuste manual de saldo/clases por semana.
+// SOLO PROPIETARIA: el saldo es dinero en especie (Recepción solo lo VE).
+router.put('/paquete/:paqueteId', verificarToken, permitirRoles('PROPIETARIA'),
+  async (req, res) => {
+    try {
+      res.json(await servicio.ajustarPaquete(req.params.paqueteId, req.body, {
+        usuarioId: req.usuario.id,
+      }));
+    } catch (e) {
+      if (e instanceof ValidacionError) return res.status(400).json({ error: e.message });
+      res.status(500).json({ error: e.message });
+    }
+  });
+
 // GET /api/familias/:id — T06 (ficha completa)
 router.get('/:id', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
   async (req, res) => {

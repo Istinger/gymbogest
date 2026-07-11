@@ -16,7 +16,20 @@ function crearPrismaFalso({ personaExistente = null } = {}) {
       create: jest.fn().mockResolvedValue({ id: 50 }),
       update: jest.fn().mockResolvedValue({ id: 50 }),
     },
-    familia: { create: jest.fn().mockResolvedValue({ id: 7, codigo: 'FAM-7' }) },
+    familia: {
+      create: jest.fn().mockResolvedValue({ id: 7, codigo: 'FAM-7' }),
+      findUnique: jest.fn().mockResolvedValue({ id: 7, codigo: 'FAM-7' }),
+    },
+    // Catálogo comercial (contratar copia los valores de la plantilla)
+    paqueteCatalogo: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 2, nombre: 'Mensual 2 clases/semana', tipo: 'mensual',
+        clasesPorSemana: 2, saldoClases: 8, precio: 120, activo: true,
+      }),
+    },
+    pago: {
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 90, ...data })),
+    },
     tutor: {
       create: jest.fn().mockResolvedValue({ id: 3 }),
       update: jest.fn().mockResolvedValue({ id: 3 }),
@@ -33,7 +46,14 @@ function crearPrismaFalso({ personaExistente = null } = {}) {
       findMany: jest.fn().mockResolvedValue([]), // reservas futuras al dar de baja
       update: jest.fn().mockResolvedValue({}),
     },
-    paquete: { update: jest.fn().mockResolvedValue({}) },
+    paquete: {
+      update: jest.fn().mockResolvedValue({}),
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 80, ...data })),
+    },
+    // Prueba gratis por registro: habilitada, 3 días (default del negocio)
+    configuracionPrueba: {
+      findUnique: jest.fn().mockResolvedValue({ id: 1, habilitado: true, diasPrueba: 3 }),
+    },
   };
   const prisma = {
     $transaction: jest.fn((fn) => fn(tx)),
@@ -43,6 +63,7 @@ function crearPrismaFalso({ personaExistente = null } = {}) {
       findUnique: jest.fn().mockResolvedValue(null),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    paquete: { findUnique: jest.fn().mockResolvedValue(null) },
   };
   return { prisma, tx };
 }
@@ -73,6 +94,34 @@ describe('RF-01: registrar familia (flujo normal, T04)', () => {
     expect(tx.nino.create).toHaveBeenCalledTimes(1);
     // el canal de origen se guarda (mide la estrategia MAX-MAX)
     expect(tx.familia.create).toHaveBeenCalledWith({ data: { canalOrigen: 'PEDIATRA_ALIADO' } });
+  });
+
+  test('la familia NUEVA recibe la prueba gratis (3 días → paquete PRUEBA_GRATIS)', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    const servicio = crearFamiliaService(prisma);
+    const r = await servicio.registrarFamilia(entradaValida);
+    expect(r.pruebaGratis).toEqual({ dias: 3 });
+    expect(tx.paquete.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ tipo: 'PRUEBA_GRATIS', saldoClases: 3, familiaId: 7 }),
+    });
+  });
+
+  test('con la prueba gratis DESHABILITADA no se crea el paquete', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    tx.configuracionPrueba.findUnique.mockResolvedValue({ id: 1, habilitado: false, diasPrueba: 3 });
+    const servicio = crearFamiliaService(prisma);
+    const r = await servicio.registrarFamilia(entradaValida);
+    expect(r.pruebaGratis).toBeNull();
+    expect(tx.paquete.create).not.toHaveBeenCalled();
+  });
+
+  test('asociar un niño a familia EXISTENTE no regala otra prueba gratis', async () => {
+    const { prisma, tx } = crearPrismaFalso({
+      personaExistente: { id: 9, tutor: { id: 4, familiaId: 33 } },
+    });
+    const servicio = crearFamiliaService(prisma);
+    await servicio.registrarFamilia(entradaValida);
+    expect(tx.paquete.create).not.toHaveBeenCalled();
   });
 });
 
@@ -271,6 +320,101 @@ describe('Extensión CU-01: corregir typos de la inscripción', () => {
     prisma.nino.findUnique.mockResolvedValue({ id: 20 });
     const servicio = crearFamiliaService(prisma);
     await expect(servicio.actualizarNino(20, { fechaNacimiento: 'no-es-fecha' }, { usuarioId: 2 }))
+      .rejects.toThrow(ValidacionError);
+  });
+});
+
+describe('Extensión RF-03: contratar paquete del catálogo (Recepción vende)', () => {
+  test('copia tipo, clases/semana y saldo de la plantilla (Recepción no los inventa)', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    const servicio = crearFamiliaService(prisma);
+    const r = await servicio.contratarPaquete(7, { paqueteCatalogoId: 2 }, { usuarioId: 2 });
+    expect(tx.paquete.create).toHaveBeenCalledWith({
+      data: { tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, familiaId: 7 },
+    });
+    expect(r.pago).toBeNull(); // pago opcional: sin conPago no se cobra
+    expect(tx.pago.create).not.toHaveBeenCalled();
+    expect(tx.$executeRawUnsafe).toHaveBeenCalledWith(expect.stringContaining('app.usuario_id'));
+  });
+
+  test('con conPago registra el Pago con el precio del catálogo en la misma transacción', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    const servicio = crearFamiliaService(prisma);
+    const r = await servicio.contratarPaquete(7, { paqueteCatalogoId: 2, conPago: true }, { usuarioId: 2 });
+    expect(tx.pago.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ familiaId: 7, monto: 120 }),
+    });
+    expect(r.pago.numeroComprobante).toMatch(/^DTL-/); // comprobante Dátil (mock)
+  });
+
+  test('rechaza contratar una plantilla INACTIVA (ya no se ofrece)', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    tx.paqueteCatalogo.findUnique.mockResolvedValue({ id: 2, activo: false });
+    const servicio = crearFamiliaService(prisma);
+    await expect(servicio.contratarPaquete(7, { paqueteCatalogoId: 2 }, { usuarioId: 2 }))
+      .rejects.toThrow(ValidacionError);
+    expect(tx.paquete.create).not.toHaveBeenCalled();
+  });
+
+  test('rechaza contratar si la plantilla o la familia no existen', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    tx.paqueteCatalogo.findUnique.mockResolvedValue(null);
+    const servicio = crearFamiliaService(prisma);
+    await expect(servicio.contratarPaquete(7, { paqueteCatalogoId: 99 }, { usuarioId: 2 }))
+      .rejects.toThrow(ValidacionError);
+
+    tx.familia.findUnique.mockResolvedValue(null);
+    await expect(servicio.contratarPaquete(999, { paqueteCatalogoId: 2 }, { usuarioId: 2 }))
+      .rejects.toThrow(ValidacionError);
+  });
+
+  test('rechaza conPago si la plantilla no tiene precio en el catálogo', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    tx.paqueteCatalogo.findUnique.mockResolvedValue({
+      id: 2, tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: null, activo: true,
+    });
+    const servicio = crearFamiliaService(prisma);
+    await expect(servicio.contratarPaquete(7, { paqueteCatalogoId: 2, conPago: true }, { usuarioId: 2 }))
+      .rejects.toThrow(ValidacionError);
+  });
+});
+
+describe('Extensión RF-03: ajuste manual del paquete (solo Propietaria)', () => {
+  test('la Propietaria ajusta el saldo y queda auditado', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    prisma.paquete.findUnique.mockResolvedValue({ id: 5, saldoClases: 3 });
+    tx.paquete.update.mockResolvedValue({ id: 5, saldoClases: 6 });
+    const servicio = crearFamiliaService(prisma);
+    const r = await servicio.ajustarPaquete(5, { saldoClases: 6 }, { usuarioId: 1 });
+    expect(tx.paquete.update).toHaveBeenCalledWith({ where: { id: 5 }, data: { saldoClases: 6 } });
+    expect(tx.$executeRawUnsafe).toHaveBeenCalledWith(expect.stringContaining('app.usuario_id'));
+    expect(r.saldoClases).toBe(6);
+  });
+
+  test('rechaza saldo negativo o no entero', async () => {
+    const { prisma } = crearPrismaFalso();
+    prisma.paquete.findUnique.mockResolvedValue({ id: 5, saldoClases: 3 });
+    const servicio = crearFamiliaService(prisma);
+    await expect(servicio.ajustarPaquete(5, { saldoClases: -1 }, { usuarioId: 1 }))
+      .rejects.toThrow(ValidacionError);
+    await expect(servicio.ajustarPaquete(5, { saldoClases: 2.5 }, { usuarioId: 1 }))
+      .rejects.toThrow(ValidacionError);
+  });
+
+  test('rechaza clasesPorSemana fuera de 1–7 y el ajuste vacío', async () => {
+    const { prisma } = crearPrismaFalso();
+    prisma.paquete.findUnique.mockResolvedValue({ id: 5 });
+    const servicio = crearFamiliaService(prisma);
+    await expect(servicio.ajustarPaquete(5, { clasesPorSemana: 8 }, { usuarioId: 1 }))
+      .rejects.toThrow(ValidacionError);
+    await expect(servicio.ajustarPaquete(5, {}, { usuarioId: 1 }))
+      .rejects.toThrow(ValidacionError);
+  });
+
+  test('rechaza ajustar un paquete que no existe', async () => {
+    const { prisma } = crearPrismaFalso();
+    const servicio = crearFamiliaService(prisma);
+    await expect(servicio.ajustarPaquete(99, { saldoClases: 5 }, { usuarioId: 1 }))
       .rejects.toThrow(ValidacionError);
   });
 });

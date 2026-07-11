@@ -34,6 +34,7 @@ export function PropietariaPanel() {
   const tabs = [
     { id: 'indicadores', label: '📊 Indicadores' },
     { id: 'clases', label: '📅 Clases' },
+    { id: 'paquetes', label: '📦 Paquetes' },
     { id: 'corporativos', label: '🏢 Corporativos' },
   ];
 
@@ -73,6 +74,7 @@ export function PropietariaPanel() {
         <div style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem' }}>
           {seccion === 'indicadores' && <TableroIndicadores />}
           {seccion === 'clases' && <ProgramarClases />}
+          {seccion === 'paquetes' && <GestionPaquetes />}
           {seccion === 'corporativos' && <Corporativos />}
         </div>
       </div>
@@ -908,6 +910,207 @@ function Corporativos() {
             ))}
           </tbody>
         </table>
+      )}
+    </div>
+  );
+}
+
+// ---------- Gestión del catálogo de paquetes + prueba gratis por registro ----------
+const PAQUETE_VACIO = { nombre: '', tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: '' };
+
+function GestionPaquetes() {
+  const {
+    getPaquetesCatalogo, createPaqueteCatalogo, updatePaqueteCatalogo, deletePaqueteCatalogo,
+    getConfigPrueba, updateConfigPrueba, loading,
+  } = useData();
+  const [paquetes, setPaquetes] = useState([]);
+  const [configPrueba, setConfigPrueba] = useState(null);
+  const [form, setForm] = useState(PAQUETE_VACIO);
+  const [editandoId, setEditandoId] = useState(null); // null = creando
+
+  const cargar = useCallback(async () => {
+    const [catalogo, prueba] = await Promise.all([getPaquetesCatalogo(), getConfigPrueba()]);
+    if (catalogo) setPaquetes(catalogo);
+    if (prueba) setConfigPrueba(prueba);
+  }, [getPaquetesCatalogo, getConfigPrueba]);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const handleForm = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const empezarEdicion = (p) => {
+    setEditandoId(p.id);
+    setForm({
+      nombre: p.nombre, tipo: p.tipo, clasesPorSemana: p.clasesPorSemana,
+      saldoClases: p.saldoClases, precio: p.precio ?? '',
+    });
+  };
+
+  const cancelarEdicion = () => { setEditandoId(null); setForm(PAQUETE_VACIO); };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const datos = {
+      nombre: form.nombre,
+      tipo: form.tipo,
+      clasesPorSemana: Number(form.clasesPorSemana),
+      saldoClases: Number(form.saldoClases),
+      precio: form.precio === '' ? null : Number(form.precio),
+    };
+    try {
+      if (editandoId) await updatePaqueteCatalogo(editandoId, datos);
+      else await createPaqueteCatalogo(datos);
+      cancelarEdicion();
+      cargar();
+    } catch (err) { /* toast ya mostrado por DataContext */ }
+  };
+
+  const toggleActivo = async (p) => {
+    try { await updatePaqueteCatalogo(p.id, { activo: !p.activo }); cargar(); }
+    catch (err) { /* toast */ }
+  };
+
+  const eliminar = async (p) => {
+    if (!window.confirm(`¿Eliminar "${p.nombre}" del catálogo? Los paquetes ya contratados por familias NO se ven afectados.`)) return;
+    try { await deletePaqueteCatalogo(p.id); cargar(); }
+    catch (err) { /* toast */ }
+  };
+
+  const guardarPrueba = async () => {
+    try {
+      const r = await updateConfigPrueba({
+        habilitado: configPrueba.habilitado,
+        diasPrueba: Number(configPrueba.diasPrueba),
+      });
+      if (r) setConfigPrueba(r);
+    } catch (err) { /* toast */ }
+  };
+
+  const inputStyle = { width: '100%', padding: '0.6rem', borderRadius: '4px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-fg)' };
+
+  return (
+    <div>
+      {/* Prueba gratis por registro */}
+      <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '8px', border: '2px solid var(--color-accent)', backgroundColor: 'var(--color-accent-soft)' }}>
+        <h3 style={{ marginBottom: '0.3rem' }}>🎈 Prueba gratis por registro</h3>
+        <p style={{ color: 'var(--color-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          Toda familia NUEVA recibe automáticamente clases de prueba gratis al inscribirse (1 por día configurado).
+        </p>
+        {configPrueba && (
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={configPrueba.habilitado}
+                onChange={(e) => setConfigPrueba((p) => ({ ...p, habilitado: e.target.checked }))}
+                style={{ width: '18px', height: '18px' }}
+              />
+              {configPrueba.habilitado ? 'Habilitada' : 'Deshabilitada'}
+            </label>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
+              Días de prueba:
+              <input
+                type="number" min={1} max={30}
+                value={configPrueba.diasPrueba}
+                onChange={(e) => setConfigPrueba((p) => ({ ...p, diasPrueba: e.target.value }))}
+                disabled={!configPrueba.habilitado}
+                style={{ ...inputStyle, width: '80px' }}
+              />
+            </label>
+            <button className="btn" onClick={guardarPrueba} disabled={loading} style={{ width: 'auto', padding: '0.5rem 1.2rem' }}>
+              💾 Guardar
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Crear / editar paquete */}
+      <h3 style={{ marginBottom: '0.5rem' }}>{editandoId ? '✏️ Editar paquete' : 'Nuevo paquete del catálogo'}</h3>
+      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Nombre *</label>
+          <input type="text" name="nombre" value={form.nombre} onChange={handleForm} required style={inputStyle} placeholder="Mensual 2 clases/semana" />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Tipo *</label>
+          <select name="tipo" value={form.tipo} onChange={handleForm} style={inputStyle}>
+            <option value="mensual">Mensual</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="semestral">Semestral</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Clases/semana *</label>
+          <input type="number" name="clasesPorSemana" min={1} max={7} value={form.clasesPorSemana} onChange={handleForm} required style={inputStyle} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Clases incluidas *</label>
+          <input type="number" name="saldoClases" min={1} value={form.saldoClases} onChange={handleForm} required style={inputStyle} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Precio ($)</label>
+          <input type="number" name="precio" min={0} step="0.01" value={form.precio} onChange={handleForm} style={inputStyle} />
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button type="submit" className="btn" disabled={loading} style={{ width: 'auto', padding: '0.6rem 1rem' }}>
+            {editandoId ? '💾 Guardar' : '➕ Agregar'}
+          </button>
+          {editandoId && (
+            <button type="button" onClick={cancelarEdicion} style={{ padding: '0.6rem 1rem', border: '1px solid var(--color-border)', borderRadius: '6px', background: 'transparent', color: 'var(--color-fg)', fontWeight: 600 }}>
+              Cancelar
+            </button>
+          )}
+        </div>
+      </form>
+
+      {/* Catálogo */}
+      <h3 style={{ marginBottom: '1rem' }}>Catálogo actual</h3>
+      {paquetes.length === 0 ? (
+        <p style={{ color: 'var(--color-muted)', textAlign: 'center', padding: '2rem' }}>
+          Aún no hay paquetes en el catálogo — crea el primero arriba
+        </p>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--color-border)', textAlign: 'left' }}>
+                <th style={{ padding: '0.6rem' }}>Nombre</th>
+                <th style={{ padding: '0.6rem' }}>Tipo</th>
+                <th style={{ padding: '0.6rem' }}>Clases/semana</th>
+                <th style={{ padding: '0.6rem' }}>Clases incluidas</th>
+                <th style={{ padding: '0.6rem' }}>Precio</th>
+                <th style={{ padding: '0.6rem' }}>Estado</th>
+                <th style={{ padding: '0.6rem' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {paquetes.map((p) => (
+                <tr key={p.id} style={{ borderBottom: '1px solid var(--color-border)', opacity: p.activo ? 1 : 0.55 }}>
+                  <td style={{ padding: '0.6rem', fontWeight: 600 }}>{p.nombre}</td>
+                  <td style={{ padding: '0.6rem', textTransform: 'capitalize' }}>{p.tipo}</td>
+                  <td style={{ padding: '0.6rem' }}>{p.clasesPorSemana}</td>
+                  <td style={{ padding: '0.6rem' }}>{p.saldoClases}</td>
+                  <td style={{ padding: '0.6rem' }}>{p.precio != null ? `$${p.precio}` : '—'}</td>
+                  <td style={{ padding: '0.6rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0.15rem 0.6rem', borderRadius: '999px', color: p.activo ? 'var(--color-success)' : 'var(--color-danger)', border: `1px solid ${p.activo ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
+                      {p.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.6rem', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => empezarEdicion(p)} title="Editar" style={{ marginRight: '0.4rem', padding: '0.3rem 0.6rem', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}>✏️</button>
+                    <button onClick={() => toggleActivo(p)} title={p.activo ? 'Desactivar (dejar de ofrecer)' : 'Reactivar'} style={{ marginRight: '0.4rem', padding: '0.3rem 0.6rem', border: '1px solid var(--color-border)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}>
+                      {p.activo ? '⏸' : '▶'}
+                    </button>
+                    <button onClick={() => eliminar(p)} title="Eliminar del catálogo" style={{ padding: '0.3rem 0.6rem', border: '1px solid var(--color-danger)', color: 'var(--color-danger)', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}>🗑</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

@@ -18,6 +18,8 @@ const PARENTESCOS = ['padre', 'madre', 'abuelo', 'abuela', 'otro'];
 
 // Validaciones compartidas con usuarioService (mismo criterio en cuentas e inscripciones)
 const { motivoCorreoInvalido, esCedulaEcuatorianaValida } = require('./validaciones');
+// Mock Dátil compartido con pagoService (contratar paquete con pago opcional)
+const { emitirComprobanteDatil } = require('./pagoService');
 
 // Comparación de nombres sin mayúsculas ni tildes ("Emilia" ≈ "emilía")
 const normalizarNombre = (n) =>
@@ -127,7 +129,29 @@ function crearFamiliaService(prisma) {
         },
       });
 
-      return { asociado: false, familiaId: familia.id, codigo: familia.codigo, nino: ninoNuevo };
+      // Prueba gratis por registro (config editable por la Propietaria):
+      // toda familia NUEVA recibe un paquete PRUEBA_GRATIS con 1 clase de
+      // prueba por día configurado (3 por defecto). Solo familias nuevas —
+      // asociar otro niño a una familia existente no regala otra prueba.
+      const configPrueba = await tx.configuracionPrueba.findUnique({ where: { id: 1 } });
+      let pruebaGratis = null;
+      if (configPrueba?.habilitado ?? true) {
+        const dias = configPrueba?.diasPrueba ?? 3;
+        await tx.paquete.create({
+          data: {
+            tipo: 'PRUEBA_GRATIS',
+            clasesPorSemana: 7, // sin restricción semanal durante la prueba
+            saldoClases: dias,
+            familiaId: familia.id,
+          },
+        });
+        pruebaGratis = { dias };
+      }
+
+      return {
+        asociado: false, familiaId: familia.id, codigo: familia.codigo,
+        nino: ninoNuevo, pruebaGratis,
+      };
     });
   }
 
@@ -275,7 +299,94 @@ function crearFamiliaService(prisma) {
     });
   }
 
-  return { registrarFamilia, listarFamilias, obtenerFamilia, actualizarTutor, actualizarNino };
+  // Extensión RF-03: contratar un paquete del CATÁLOGO para una familia.
+  // RECEPCION y PROPIETARIA. Los valores (tipo, clasesPorSemana, saldo) se
+  // COPIAN de la plantilla — Recepción no los inventa. El pago es OPCIONAL
+  // (puede cobrarse por fuera); si conPago=true se registra un Pago con el
+  // precio del catálogo y comprobante Dátil en la MISMA transacción.
+  async function contratarPaquete(familiaId, { paqueteCatalogoId, conPago = false }, { usuarioId } = {}) {
+    if (!paqueteCatalogoId) throw new ValidacionError('paqueteCatalogoId es obligatorio');
+
+    return prisma.$transaction(async (tx) => {
+      if (usuarioId) {
+        await tx.$executeRawUnsafe(`SET LOCAL app.usuario_id = '${Number(usuarioId)}'`);
+      }
+      const familia = await tx.familia.findUnique({ where: { id: Number(familiaId) } });
+      if (!familia) throw new ValidacionError('La familia no existe');
+
+      const plantilla = await tx.paqueteCatalogo.findUnique({
+        where: { id: Number(paqueteCatalogoId) },
+      });
+      if (!plantilla) throw new ValidacionError('El paquete no existe en el catálogo');
+      if (!plantilla.activo) {
+        throw new ValidacionError('Ese paquete del catálogo está inactivo y ya no se ofrece');
+      }
+      if (conPago && (plantilla.precio === null || plantilla.precio === undefined)) {
+        throw new ValidacionError(
+          'El paquete no tiene precio en el catálogo; registra el pago por separado o pide a la Propietaria fijar el precio');
+      }
+
+      const paquete = await tx.paquete.create({
+        data: {
+          tipo: plantilla.tipo,
+          clasesPorSemana: plantilla.clasesPorSemana,
+          saldoClases: plantilla.saldoClases,
+          familiaId: familia.id,
+        },
+      });
+
+      let pago = null;
+      if (conPago) {
+        const comprobante = emitirComprobanteDatil({ familiaId: familia.id, monto: plantilla.precio });
+        pago = await tx.pago.create({
+          data: {
+            familiaId: familia.id,
+            monto: plantilla.precio,
+            numeroComprobante: comprobante.numeroComprobante,
+          },
+        });
+      }
+      return { paquete, pago, plantilla: { nombre: plantilla.nombre } };
+    });
+  }
+
+  // Extensión RF-03: ajuste manual de un paquete contratado — SOLO PROPIETARIA
+  // (la ruta restringe el rol). El saldo es dinero en especie: el sistema ya
+  // lo mueve solo (reservar descuenta, cancelar/baja devuelve); todo ajuste
+  // manual queda auditado con el usuario_id de la Propietaria.
+  async function ajustarPaquete(paqueteId, datos, { usuarioId } = {}) {
+    const paquete = await prisma.paquete.findUnique({ where: { id: Number(paqueteId) } });
+    if (!paquete) throw new ValidacionError('El paquete no existe');
+
+    const data = {};
+    if (datos.saldoClases !== undefined) {
+      const saldo = Number(datos.saldoClases);
+      if (!Number.isInteger(saldo) || saldo < 0) {
+        throw new ValidacionError('saldoClases debe ser un entero mayor o igual a 0');
+      }
+      data.saldoClases = saldo;
+    }
+    if (datos.clasesPorSemana !== undefined) {
+      const cps = Number(datos.clasesPorSemana);
+      if (!Number.isInteger(cps) || cps < 1 || cps > 7) {
+        throw new ValidacionError('clasesPorSemana debe estar entre 1 y 7');
+      }
+      data.clasesPorSemana = cps;
+    }
+    if (!Object.keys(data).length) throw new ValidacionError('Nada que ajustar');
+
+    return prisma.$transaction(async (tx) => {
+      if (usuarioId) {
+        await tx.$executeRawUnsafe(`SET LOCAL app.usuario_id = '${Number(usuarioId)}'`);
+      }
+      return tx.paquete.update({ where: { id: paquete.id }, data });
+    });
+  }
+
+  return {
+    registrarFamilia, listarFamilias, obtenerFamilia,
+    actualizarTutor, actualizarNino, contratarPaquete, ajustarPaquete,
+  };
 }
 
 module.exports = { crearFamiliaService, ValidacionError, CANALES };

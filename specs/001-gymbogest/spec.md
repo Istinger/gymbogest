@@ -33,6 +33,25 @@ Como RECEPCION o PROPIETARIA quiero corregir datos mal tipeados del tutor o del 
 - [ ] Un niño inactivo no puede recibir reservas nuevas (la API responde 409 con mensaje claro).
 - [ ] Al dar de baja, sus reservas ACTIVAS de clases FUTURAS se cancelan devolviendo el saldo al paquete; las clases pasadas/en curso se conservan como historial. Las canceladas dejan de contar en el cupo y de mostrarse en la agenda del día.
 
+#### Extensión RF-01/RF-03 · Catálogo de paquetes y prueba gratis
+Como PROPIETARIA quiero gestionar el catálogo de paquetes del centro y la prueba gratis por registro.
+**Aceptación:**
+- [ ] La PROPIETARIA crea, edita, desactiva/reactiva y elimina paquetes del catálogo (nombre único, clasesPorSemana 1–7, clases incluidas ≥ 1, precio opcional ≥ 0).
+- [ ] El catálogo es una plantilla comercial: eliminar/desactivar un ítem NO afecta a los paquetes ya contratados por familias (sin FK).
+- [ ] Recepción solo ve los paquetes ACTIVOS.
+- [ ] Prueba gratis configurable (habilitada/deshabilitada, 1–30 días; default: habilitada, 3 días).
+- [ ] Toda familia NUEVA recibe automáticamente un paquete PRUEBA_GRATIS con 1 clase de prueba por día configurado; asociar un niño a una familia existente NO regala otra prueba.
+- [ ] Cambios al catálogo y a la configuración quedan auditados (triggers + `app.usuario_id`).
+
+#### Extensión RF-03 · Contratar y ajustar paquetes de una familia
+Como RECEPCION quiero contratar un paquete del catálogo para una familia; como PROPIETARIA quiero corregir un paquete contratado.
+**Aceptación:**
+- [ ] RECEPCION y PROPIETARIA contratan un paquete eligiendo SOLO del catálogo activo: tipo, clasesPorSemana y saldo se COPIAN de la plantilla (Recepción no inventa valores).
+- [ ] Contratar una plantilla inactiva o inexistente se rechaza con mensaje claro.
+- [ ] El pago es OPCIONAL al contratar (puede cobrarse por fuera): si se marca, se registra un Pago con el precio del catálogo y comprobante Dátil en la MISMA transacción.
+- [ ] RECEPCION VE los paquetes de cada familia (tipo, saldo, prueba) pero NO puede editarlos: el ajuste manual de saldo es SOLO de la PROPIETARIA (el saldo es dinero en especie; el sistema ya lo mueve solo al reservar/cancelar). Recepción recibe 403.
+- [ ] El ajuste no permite saldo negativo y queda auditado (trigger sobre Paquete + `app.usuario_id`).
+
 ### HF-2 · Programar clases (RF-02)
 Como RECEPCION quiero crear clases por programa y horario con cupo máximo 9.
 **Aceptación:**

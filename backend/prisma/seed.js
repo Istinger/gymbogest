@@ -92,6 +92,22 @@ async function main() {
   }
   console.log(`✔ ${horarioHoy.length} clases extra creadas para HOY (agenda del día).`);
 
+  // ---------- Catálogo de paquetes (gestionado por la Propietaria) ----------
+  await prisma.paqueteCatalogo.createMany({
+    data: [
+      { nombre: 'Mensual 2 clases/semana', tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: 120 },
+      { nombre: 'Mensual 3 clases/semana', tipo: 'mensual', clasesPorSemana: 3, saldoClases: 12, precio: 160 },
+      { nombre: 'Trimestral 2 clases/semana', tipo: 'trimestral', clasesPorSemana: 2, saldoClases: 24, precio: 320 },
+    ],
+  });
+  // Prueba gratis por registro: habilitada, 3 días (regla del negocio)
+  await prisma.configuracionPrueba.upsert({
+    where: { id: 1 },
+    create: { id: 1, habilitado: true, diasPrueba: 3 },
+    update: {},
+  });
+  console.log('✔ Catálogo de paquetes (3) y prueba gratis (3 días) configurados.');
+
   // ---------- Familia + Niño + Paquete de ejemplo, para probar reservas ----------
   const familiaDemo = await prisma.familia.create({
     data: { canalOrigen: 'REFERIDO' },

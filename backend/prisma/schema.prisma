@@ -135,6 +135,26 @@ model Nino {
   progresos   Progreso[]
 }
 
+// Catálogo de paquetes que ofrece el centro (lo gestiona la PROPIETARIA).
+// Es la plantilla comercial; Paquete (abajo) es la instancia contratada por una familia.
+model PaqueteCatalogo {
+  id              Int     @id @default(autoincrement())
+  nombre          String  @unique
+  tipo            String  // mensual, trimestral...
+  clasesPorSemana Int     // 1 a 7 (entrevista)
+  saldoClases     Int     // clases incluidas al contratarlo
+  precio          Float?
+  activo          Boolean @default(true) // inactivo: no se ofrece, sin borrar historial
+}
+
+// Prueba gratis por registro (fila única id=1, editable por la PROPIETARIA).
+// Al inscribir una familia NUEVA se le otorgan diasPrueba clases de prueba gratis.
+model ConfiguracionPrueba {
+  id         Int     @id @default(1)
+  habilitado Boolean @default(true)
+  diasPrueba Int     @default(3)
+}
+
 model Paquete {
   id              Int     @id @default(autoincrement())
   tipo            String  // mensual, trimestral...

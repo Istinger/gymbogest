@@ -68,9 +68,54 @@ export function DataProvider({ children }) {
       // EXISTENTE (no hay familia nueva) — avisar con el mensaje real del backend.
       toast.success(response.asociado
         ? response.mensaje
-        : 'Familia registrada correctamente');
+        : `Familia registrada correctamente${response.pruebaGratis
+          ? ` — incluye ${response.pruebaGratis.dias} clase(s) de prueba gratis`
+          : ''}`);
     }
     return response;
+  }, [axiosInstance, handleRequest]);
+
+  // Catálogo de paquetes + prueba gratis (sección Paquetes de Propietaria)
+  const getPaquetesCatalogo = useCallback(async () => {
+    return handleRequest('getPaquetesCatalogo', async () => {
+      const { data } = await axiosInstance.get('/paquetes-catalogo');
+      return data;
+    }, null, true);
+  }, [axiosInstance, handleRequest]);
+
+  const createPaqueteCatalogo = useCallback(async (datos) => {
+    return handleRequest('createPaqueteCatalogo', async () => {
+      const { data } = await axiosInstance.post('/paquetes-catalogo', datos);
+      return data;
+    }, 'Paquete agregado al catálogo', true);
+  }, [axiosInstance, handleRequest]);
+
+  const updatePaqueteCatalogo = useCallback(async (id, datos) => {
+    return handleRequest('updatePaqueteCatalogo', async () => {
+      const { data } = await axiosInstance.put(`/paquetes-catalogo/${id}`, datos);
+      return data;
+    }, 'Paquete actualizado', true);
+  }, [axiosInstance, handleRequest]);
+
+  const deletePaqueteCatalogo = useCallback(async (id) => {
+    return handleRequest('deletePaqueteCatalogo', async () => {
+      const { data } = await axiosInstance.delete(`/paquetes-catalogo/${id}`);
+      return data;
+    }, 'Paquete eliminado del catálogo', true);
+  }, [axiosInstance, handleRequest]);
+
+  const getConfigPrueba = useCallback(async () => {
+    return handleRequest('getConfigPrueba', async () => {
+      const { data } = await axiosInstance.get('/paquetes-catalogo/prueba');
+      return data;
+    }, null, true);
+  }, [axiosInstance, handleRequest]);
+
+  const updateConfigPrueba = useCallback(async (datos) => {
+    return handleRequest('updateConfigPrueba', async () => {
+      const { data } = await axiosInstance.put('/paquetes-catalogo/prueba', datos);
+      return data;
+    }, 'Configuración de la prueba gratis guardada', true);
   }, [axiosInstance, handleRequest]);
 
   // Extensión CU-01: corregir typos de la inscripción (tutor / niño)
@@ -94,6 +139,29 @@ export function DataProvider({ children }) {
         : 'Datos del niño actualizados');
     }
     return response;
+  }, [axiosInstance, handleRequest]);
+
+  // Extensión RF-03: contratar un paquete del catálogo para una familia
+  // (Recepción/Propietaria). El pago es opcional (conPago).
+  const contratarPaquete = useCallback(async (familiaId, datos) => {
+    const response = await handleRequest('contratarPaquete', async () => {
+      const { data } = await axiosInstance.post(`/familias/${familiaId}/paquetes`, datos);
+      return data;
+    }, null, true);
+    if (response) {
+      toast.success(response.pago
+        ? `Paquete "${response.plantilla?.nombre}" contratado — pago de $${response.pago.monto} registrado (${response.pago.numeroComprobante})`
+        : `Paquete "${response.plantilla?.nombre}" contratado (pago por fuera)`);
+    }
+    return response;
+  }, [axiosInstance, handleRequest]);
+
+  // Ajuste manual del paquete contratado — SOLO PROPIETARIA (el backend da 403 al resto)
+  const ajustarPaquete = useCallback(async (paqueteId, datos) => {
+    return handleRequest('ajustarPaquete', async () => {
+      const { data } = await axiosInstance.put(`/familias/paquete/${paqueteId}`, datos);
+      return data;
+    }, 'Paquete ajustado', true);
   }, [axiosInstance, handleRequest]);
 
   const getAgenda = useCallback(async (fecha) => {
@@ -292,6 +360,14 @@ export function DataProvider({ children }) {
     createFamilia,
     updateTutor,
     updateNino,
+    contratarPaquete,
+    ajustarPaquete,
+    getPaquetesCatalogo,
+    createPaqueteCatalogo,
+    updatePaqueteCatalogo,
+    deletePaqueteCatalogo,
+    getConfigPrueba,
+    updateConfigPrueba,
     getAgenda,
     createReserva,
     updateReserva,
