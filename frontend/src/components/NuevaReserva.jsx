@@ -95,6 +95,22 @@ export function NuevaReserva() {
     .filter((c) => c.programa === formData.programa && cupoUsado(c) < c.cupoMaximo)
     .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora));
 
+  // Vigencia (RF-03): un paquete vencido no puede reservar (el backend
+  // igual lo rechaza con 409; aquí se deshabilita para avisar antes)
+  const estaVencido = (paq) =>
+    paq.fechaVencimiento && new Date(paq.fechaVencimiento) < new Date();
+
+  const etiquetaPaquete = (paq) => {
+    const base = `${paq.tipo} (${paq.saldoClases} clases)`;
+    if (estaVencido(paq)) {
+      return `${base} — ⛔ VENCIDO el ${new Date(paq.fechaVencimiento).toLocaleDateString('es-EC')}`;
+    }
+    if (paq.fechaVencimiento) {
+      return `${base} — vence ${new Date(paq.fechaVencimiento).toLocaleDateString('es-EC')}`;
+    }
+    return base;
+  };
+
   const formatHorario = (fechaHora) => {
     const d = new Date(fechaHora);
     const fecha = d.toLocaleDateString('es-EC', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -202,8 +218,8 @@ export function NuevaReserva() {
           >
             <option value="">-- Selecciona --</option>
             {paquetes.map((paq) => (
-              <option key={paq.id} value={paq.id}>
-                {paq.tipo} ({paq.saldoClases} clases)
+              <option key={paq.id} value={paq.id} disabled={estaVencido(paq)}>
+                {etiquetaPaquete(paq)}
               </option>
             ))}
           </select>

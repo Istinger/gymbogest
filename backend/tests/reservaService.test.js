@@ -10,12 +10,12 @@
 // ============================================================
 const {
   crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
-  NinoInactivoError,
+  NinoInactivoError, PaqueteVencidoError,
 } = require('../src/services/reservaService');
 
 function crearPrismaFalso({
   ocupados, saldoClases, reservaAnterior, reservaExistente = null, reservaEnChoque = null,
-  ninoActivo = true,
+  ninoActivo = true, fechaVencimiento = null,
 }) {
   const tx = {
     $executeRawUnsafe: jest.fn(),
@@ -36,7 +36,7 @@ function crearPrismaFalso({
         Promise.resolve(where.clase ? reservaEnChoque : reservaExistente)),
     },
     paquete: {
-      findUnique: jest.fn().mockResolvedValue({ id: 5, saldoClases }),
+      findUnique: jest.fn().mockResolvedValue({ id: 5, saldoClases, fechaVencimiento }),
       update: jest.fn().mockResolvedValue({}),
     },
   };
@@ -161,5 +161,51 @@ describe('Extensión CU-01: niño inactivo (baja suave) no puede reservar', () =
     const servicio = crearReservaService(prisma);
     const r = await servicio.reservarClase({ ninoId: 1, claseId: 10, paqueteId: 5 });
     expect(r.estado).toBe('ACTIVA');
+  });
+});
+
+describe('Extensión RF-03: vigencia del paquete (el tiempo terminó)', () => {
+  const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const enUnMes = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  test('rechaza reservar con un paquete VENCIDO aunque tenga saldo', async () => {
+    const { prisma, tx } = crearPrismaFalso({
+      ocupados: 0, saldoClases: 5, fechaVencimiento: ayer,
+    });
+    const servicio = crearReservaService(prisma);
+    await expect(servicio.reservarClase(datos)).rejects.toThrow(PaqueteVencidoError);
+    await expect(servicio.reservarClase(datos)).rejects.toThrow(/venció/);
+    expect(tx.reserva.create).not.toHaveBeenCalled(); // no se creó ni descontó nada
+    expect(tx.paquete.update).not.toHaveBeenCalled();
+  });
+
+  test('un paquete con vencimiento FUTURO reserva con normalidad', async () => {
+    const { prisma } = crearPrismaFalso({
+      ocupados: 0, saldoClases: 5, fechaVencimiento: enUnMes,
+    });
+    const servicio = crearReservaService(prisma);
+    const r = await servicio.reservarClase(datos);
+    expect(r.estado).toBe('ACTIVA');
+  });
+
+  test('un paquete SIN fecha de vencimiento (null) nunca vence', async () => {
+    const { prisma } = crearPrismaFalso({
+      ocupados: 0, saldoClases: 5, fechaVencimiento: null,
+    });
+    const servicio = crearReservaService(prisma);
+    const r = await servicio.reservarClase(datos);
+    expect(r.estado).toBe('ACTIVA');
+  });
+
+  test('reagendar una clase ya pagada SÍ se permite con el paquete vencido', async () => {
+    // La clase ya fue descontada del saldo: solo cambia de horario (spec)
+    const { prisma, tx } = crearPrismaFalso({
+      ocupados: 2, saldoClases: 0, fechaVencimiento: ayer,
+      reservaAnterior: { id: 1, ninoId: 3, claseId: 10, paqueteId: 5, estado: 'ACTIVA' },
+    });
+    const servicio = crearReservaService(prisma);
+    const r = await servicio.reagendarReserva(1, 20, 7);
+    expect(r.estado).toBe('ACTIVA');
+    expect(tx.paquete.update).not.toHaveBeenCalled();
   });
 });

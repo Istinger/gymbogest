@@ -106,6 +106,16 @@ describe('RF-01: registrar familia (flujo normal, T04)', () => {
     });
   });
 
+  test('la prueba gratis VENCE a los N días del registro (ventana de calendario)', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    const servicio = crearFamiliaService(prisma);
+    await servicio.registrarFamilia(entradaValida);
+    const { fechaVencimiento } = tx.paquete.create.mock.calls[0][0].data;
+    const diasHastaVencer = (fechaVencimiento - new Date()) / (24 * 60 * 60 * 1000);
+    expect(diasHastaVencer).toBeGreaterThan(2.9); // ≈ 3 días (config del negocio)
+    expect(diasHastaVencer).toBeLessThanOrEqual(3);
+  });
+
   test('con la prueba gratis DESHABILITADA no se crea el paquete', async () => {
     const { prisma, tx } = crearPrismaFalso();
     tx.configuracionPrueba.findUnique.mockResolvedValue({ id: 1, habilitado: false, diasPrueba: 3 });
@@ -330,7 +340,11 @@ describe('Extensión RF-03: contratar paquete del catálogo (Recepción vende)',
     const servicio = crearFamiliaService(prisma);
     const r = await servicio.contratarPaquete(7, { paqueteCatalogoId: 2 }, { usuarioId: 2 });
     expect(tx.paquete.create).toHaveBeenCalledWith({
-      data: { tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, familiaId: 7 },
+      data: {
+        tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8,
+        fechaVencimiento: null, // la plantilla no define duración → no vence
+        familiaId: 7,
+      },
     });
     expect(r.pago).toBeNull(); // pago opcional: sin conPago no se cobra
     expect(tx.pago.create).not.toHaveBeenCalled();
@@ -366,6 +380,20 @@ describe('Extensión RF-03: contratar paquete del catálogo (Recepción vende)',
     tx.familia.findUnique.mockResolvedValue(null);
     await expect(servicio.contratarPaquete(999, { paqueteCatalogoId: 2 }, { usuarioId: 2 }))
       .rejects.toThrow(ValidacionError);
+  });
+
+  test('si la plantilla define duración, el paquete vence hoy + duracionDias', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    tx.paqueteCatalogo.findUnique.mockResolvedValue({
+      id: 2, tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8,
+      precio: 120, duracionDias: 30, activo: true,
+    });
+    const servicio = crearFamiliaService(prisma);
+    await servicio.contratarPaquete(7, { paqueteCatalogoId: 2 }, { usuarioId: 2 });
+    const { fechaVencimiento } = tx.paquete.create.mock.calls[0][0].data;
+    const diasHastaVencer = (fechaVencimiento - new Date()) / (24 * 60 * 60 * 1000);
+    expect(diasHastaVencer).toBeGreaterThan(29.9);
+    expect(diasHastaVencer).toBeLessThanOrEqual(30);
   });
 
   test('rechaza conPago si la plantilla no tiene precio en el catálogo', async () => {

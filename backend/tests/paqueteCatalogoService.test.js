@@ -72,6 +72,33 @@ describe('Catálogo: crear paquete', () => {
     await expect(servicio.crearPaquete({ ...paqueteValido, precio: -5 }, 1))
       .rejects.toThrow(CatalogoInvalidoError);
   });
+
+  test('acepta duración en días (vigencia) y también sin duración (no vence)', async () => {
+    const { prisma, tx } = crearPrismaFalso();
+    const servicio = crearPaqueteCatalogoService(prisma);
+    await servicio.crearPaquete({ ...paqueteValido, duracionDias: 30 }, 1);
+    expect(tx.paqueteCatalogo.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ duracionDias: 30 }),
+    });
+    prisma.paqueteCatalogo.findUnique.mockResolvedValue(null);
+    await servicio.crearPaquete({ ...paqueteValido, nombre: 'Otro' }, 1);
+    expect(tx.paqueteCatalogo.create).toHaveBeenLastCalledWith({
+      data: expect.objectContaining({ duracionDias: null }),
+    });
+  });
+
+  test('rechaza duracionDias fuera de 1–365', async () => {
+    const { prisma } = crearPrismaFalso();
+    const servicio = crearPaqueteCatalogoService(prisma);
+    await expect(servicio.crearPaquete({ ...paqueteValido, duracionDias: 0 }, 1))
+      .rejects.toThrow(CatalogoInvalidoError);
+    await expect(servicio.crearPaquete({ ...paqueteValido, duracionDias: 400 }, 1))
+      .rejects.toThrow(CatalogoInvalidoError);
+    // al editar también se valida (el paquete debe existir para llegar ahí)
+    prisma.paqueteCatalogo.findUnique.mockResolvedValue({ id: 1, ...paqueteValido });
+    await expect(servicio.actualizarPaquete(1, { duracionDias: 1.5 }, 1))
+      .rejects.toThrow(CatalogoInvalidoError);
+  });
 });
 
 describe('Catálogo: editar, desactivar y eliminar', () => {

@@ -33,6 +33,14 @@ function validarPaquete({ nombre, tipo, clasesPorSemana, saldoClases, precio }, 
   if (errores.length) throw new CatalogoInvalidoError(errores.join('; '));
 }
 
+// Vigencia (RF-03): duración en días al contratar; null = no vence
+function validarDuracion(duracionDias) {
+  if (duracionDias !== undefined && duracionDias !== null
+      && (!Number.isInteger(duracionDias) || duracionDias < 1 || duracionDias > 365)) {
+    throw new CatalogoInvalidoError('duracionDias debe ser un entero entre 1 y 365 (o vacío si no vence)');
+  }
+}
+
 function crearPaqueteCatalogoService(prisma) {
   // Recepción ve solo los activos (para ofrecer); Propietaria ve todos
   async function listarCatalogo({ soloActivos = false } = {}) {
@@ -44,6 +52,7 @@ function crearPaqueteCatalogoService(prisma) {
 
   async function crearPaquete(datos, usuarioId) {
     validarPaquete(datos);
+    validarDuracion(datos.duracionDias);
     const existente = await prisma.paqueteCatalogo.findUnique({
       where: { nombre: datos.nombre.trim() },
     });
@@ -60,6 +69,7 @@ function crearPaqueteCatalogoService(prisma) {
           clasesPorSemana: datos.clasesPorSemana,
           saldoClases: datos.saldoClases,
           precio: datos.precio ?? null,
+          duracionDias: datos.duracionDias ?? null,
         },
       });
     });
@@ -69,6 +79,7 @@ function crearPaqueteCatalogoService(prisma) {
     const paquete = await prisma.paqueteCatalogo.findUnique({ where: { id: Number(id) } });
     if (!paquete) throw new CatalogoInvalidoError('El paquete no existe en el catálogo');
     validarPaquete(datos, true);
+    validarDuracion(datos.duracionDias);
     if (datos.activo !== undefined && typeof datos.activo !== 'boolean') {
       throw new CatalogoInvalidoError('activo debe ser true o false');
     }
@@ -89,6 +100,7 @@ function crearPaqueteCatalogoService(prisma) {
           ...(datos.clasesPorSemana !== undefined && { clasesPorSemana: datos.clasesPorSemana }),
           ...(datos.saldoClases !== undefined && { saldoClases: datos.saldoClases }),
           ...(datos.precio !== undefined && { precio: datos.precio }),
+          ...(datos.duracionDias !== undefined && { duracionDias: datos.duracionDias }),
           ...(datos.activo !== undefined && { activo: datos.activo }),
         },
       });

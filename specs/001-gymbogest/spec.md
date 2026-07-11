@@ -52,6 +52,17 @@ Como RECEPCION quiero contratar un paquete del catálogo para una familia; como 
 - [ ] RECEPCION VE los paquetes de cada familia (tipo, saldo, prueba) pero NO puede editarlos: el ajuste manual de saldo es SOLO de la PROPIETARIA (el saldo es dinero en especie; el sistema ya lo mueve solo al reservar/cancelar). Recepción recibe 403.
 - [ ] El ajuste no permite saldo negativo y queda auditado (trigger sobre Paquete + `app.usuario_id`).
 
+#### Extensión RF-03 · Vigencia de los paquetes (vencimiento en el tiempo)
+Como PROPIETARIA quiero que los paquetes tengan una duración; como TUTOR no debo poder reservar con un paquete cuyo tiempo ya terminó.
+**Aceptación:**
+- [ ] Cada paquete del catálogo puede tener `duracionDias` (1–365, opcional: sin valor = no vence).
+- [ ] Al contratar, el paquete de la familia recibe `fechaVencimiento` = hoy + duracionDias (null si la plantilla no vence).
+- [ ] El paquete PRUEBA_GRATIS vence a los N días configurados desde el registro (ventana de calendario).
+- [ ] Reservar con un paquete VENCIDO se RECHAZA (409) con mensaje claro y sugerencia de renovar, aunque tenga saldo.
+- [ ] Un paquete sin `fechaVencimiento` (contratos antiguos o plantillas sin duración) nunca vence.
+- [ ] Reagendar una reserva ya pagada SÍ se permite aunque el paquete haya vencido (la clase ya fue descontada; solo cambia de horario).
+- [ ] El portal del Tutor muestra la fecha de vencimiento de cada paquete y deshabilita los vencidos en el selector.
+
 ### HF-2 · Programar clases (RF-02)
 Como RECEPCION quiero crear clases por programa y horario con cupo máximo 9.
 **Aceptación:**

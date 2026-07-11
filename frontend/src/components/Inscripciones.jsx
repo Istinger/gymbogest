@@ -567,6 +567,11 @@ function PaquetesFamiliaModal({ familia, onClose, onGuardado }) {
                 {p.tipo === 'PRUEBA_GRATIS' ? '🎁 Prueba gratis' : p.tipo}
                 <span style={{ display: 'block', fontSize: '0.78rem', fontWeight: 400, color: 'var(--color-muted, #888)' }}>
                   {p.clasesPorSemana} clase{p.clasesPorSemana !== 1 ? 's' : ''}/semana
+                  {p.fechaVencimiento && (
+                    new Date(p.fechaVencimiento) < new Date()
+                      ? <span style={{ color: 'var(--color-danger)', fontWeight: 700 }}> · ⛔ vencido el {new Date(p.fechaVencimiento).toLocaleDateString('es-EC')}</span>
+                      : <span> · vence {new Date(p.fechaVencimiento).toLocaleDateString('es-EC')}</span>
+                  )}
                 </span>
               </span>
               {esPropietaria ? (
@@ -633,6 +638,7 @@ function PaquetesFamiliaModal({ familia, onClose, onGuardado }) {
                   <option key={p.id} value={p.id}>
                     {p.nombre} · {p.saldoClases} clases ({p.clasesPorSemana}/sem)
                     {p.precio != null ? ` · $${p.precio}` : ''}
+                    {p.duracionDias != null ? ` · ${p.duracionDias} días` : ''}
                   </option>
                 ))}
               </select>

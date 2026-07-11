@@ -95,9 +95,9 @@ async function main() {
   // ---------- Catálogo de paquetes (gestionado por la Propietaria) ----------
   await prisma.paqueteCatalogo.createMany({
     data: [
-      { nombre: 'Mensual 2 clases/semana', tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: 120 },
-      { nombre: 'Mensual 3 clases/semana', tipo: 'mensual', clasesPorSemana: 3, saldoClases: 12, precio: 160 },
-      { nombre: 'Trimestral 2 clases/semana', tipo: 'trimestral', clasesPorSemana: 2, saldoClases: 24, precio: 320 },
+      { nombre: 'Mensual 2 clases/semana', tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: 120, duracionDias: 30 },
+      { nombre: 'Mensual 3 clases/semana', tipo: 'mensual', clasesPorSemana: 3, saldoClases: 12, precio: 160, duracionDias: 30 },
+      { nombre: 'Trimestral 2 clases/semana', tipo: 'trimestral', clasesPorSemana: 2, saldoClases: 24, precio: 320, duracionDias: 90 },
     ],
   });
   // Prueba gratis por registro: habilitada, 3 días (regla del negocio)
@@ -118,9 +118,27 @@ async function main() {
   await prisma.tutor.create({
     data: { personaId: personaTutorDemo.id, parentesco: 'madre', familiaId: familiaDemo.id },
   });
+  const en30dias = new Date();
+  en30dias.setDate(en30dias.getDate() + 30);
   const paqueteDemo = await prisma.paquete.create({
-    data: { tipo: 'mensual', clasesPorSemana: 3, saldoClases: 12, familiaId: familiaDemo.id },
+    data: {
+      tipo: 'mensual', clasesPorSemana: 3, saldoClases: 12,
+      fechaVencimiento: en30dias, familiaId: familiaDemo.id,
+    },
   });
+  // Simulación de vigencia (RF-03): paquete VENCIDO ayer pero CON saldo —
+  // al elegirlo en el portal del Tutor la reserva debe rechazarse por tiempo,
+  // demostrando que el control es de vencimiento y no de saldo.
+  const ayer = new Date();
+  ayer.setDate(ayer.getDate() - 1);
+  const paqueteVencido = await prisma.paquete.create({
+    data: {
+      tipo: 'mensual (vencido)', clasesPorSemana: 3, saldoClases: 5,
+      fechaVencimiento: ayer, familiaId: familiaDemo.id,
+    },
+  });
+  console.log(`✔ Paquete VENCIDO con saldo (id ${paqueteVencido.id}) para el Tutor Demo`
+    + ' — elegirlo al reservar debe dar 409 "El paquete venció…".');
 
   // ---------- Escenario clave para la demo: LLENAR la clase[0] con 9 niños ----------
   // Así, en la defensa, intentar reservar un 10.º niño demuestra el rechazo por cupo (CU-02 exc.3)

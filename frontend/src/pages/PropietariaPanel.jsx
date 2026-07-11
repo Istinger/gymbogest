@@ -916,7 +916,7 @@ function Corporativos() {
 }
 
 // ---------- Gestión del catálogo de paquetes + prueba gratis por registro ----------
-const PAQUETE_VACIO = { nombre: '', tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: '' };
+const PAQUETE_VACIO = { nombre: '', tipo: 'mensual', clasesPorSemana: 2, saldoClases: 8, precio: '', duracionDias: '' };
 
 function GestionPaquetes() {
   const {
@@ -945,7 +945,7 @@ function GestionPaquetes() {
     setEditandoId(p.id);
     setForm({
       nombre: p.nombre, tipo: p.tipo, clasesPorSemana: p.clasesPorSemana,
-      saldoClases: p.saldoClases, precio: p.precio ?? '',
+      saldoClases: p.saldoClases, precio: p.precio ?? '', duracionDias: p.duracionDias ?? '',
     });
   };
 
@@ -959,6 +959,8 @@ function GestionPaquetes() {
       clasesPorSemana: Number(form.clasesPorSemana),
       saldoClases: Number(form.saldoClases),
       precio: form.precio === '' ? null : Number(form.precio),
+      // Vigencia (RF-03): vacío = el paquete no vence
+      duracionDias: form.duracionDias === '' ? null : Number(form.duracionDias),
     };
     try {
       if (editandoId) await updatePaqueteCatalogo(editandoId, datos);
@@ -1029,7 +1031,7 @@ function GestionPaquetes() {
 
       {/* Crear / editar paquete */}
       <h3 style={{ marginBottom: '0.5rem' }}>{editandoId ? '✏️ Editar paquete' : 'Nuevo paquete del catálogo'}</h3>
-      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Nombre *</label>
           <input type="text" name="nombre" value={form.nombre} onChange={handleForm} required style={inputStyle} placeholder="Mensual 2 clases/semana" />
@@ -1053,6 +1055,10 @@ function GestionPaquetes() {
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Precio ($)</label>
           <input type="number" name="precio" min={0} step="0.01" value={form.precio} onChange={handleForm} style={inputStyle} />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }} title="Al contratar, el paquete vence a los N días; vacío = no vence">Duración (días)</label>
+          <input type="number" name="duracionDias" min={1} max={365} value={form.duracionDias} onChange={handleForm} style={inputStyle} placeholder="no vence" />
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button type="submit" className="btn" disabled={loading} style={{ width: 'auto', padding: '0.6rem 1rem' }}>
@@ -1082,6 +1088,7 @@ function GestionPaquetes() {
                 <th style={{ padding: '0.6rem' }}>Clases/semana</th>
                 <th style={{ padding: '0.6rem' }}>Clases incluidas</th>
                 <th style={{ padding: '0.6rem' }}>Precio</th>
+                <th style={{ padding: '0.6rem' }}>Duración</th>
                 <th style={{ padding: '0.6rem' }}>Estado</th>
                 <th style={{ padding: '0.6rem' }}></th>
               </tr>
@@ -1094,6 +1101,7 @@ function GestionPaquetes() {
                   <td style={{ padding: '0.6rem' }}>{p.clasesPorSemana}</td>
                   <td style={{ padding: '0.6rem' }}>{p.saldoClases}</td>
                   <td style={{ padding: '0.6rem' }}>{p.precio != null ? `$${p.precio}` : '—'}</td>
+                  <td style={{ padding: '0.6rem' }}>{p.duracionDias != null ? `${p.duracionDias} días` : 'No vence'}</td>
                   <td style={{ padding: '0.6rem' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, padding: '0.15rem 0.6rem', borderRadius: '999px', color: p.activo ? 'var(--color-success)' : 'var(--color-danger)', border: `1px solid ${p.activo ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
                       {p.activo ? 'Activo' : 'Inactivo'}

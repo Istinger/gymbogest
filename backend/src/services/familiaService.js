@@ -137,11 +137,16 @@ function crearFamiliaService(prisma) {
       let pruebaGratis = null;
       if (configPrueba?.habilitado ?? true) {
         const dias = configPrueba?.diasPrueba ?? 3;
+        // Vigencia (RF-03): la prueba VENCE a los N días del registro
+        // (ventana de calendario) — después ya no reserva aunque le quede saldo
+        const vence = new Date();
+        vence.setDate(vence.getDate() + dias);
         await tx.paquete.create({
           data: {
             tipo: 'PRUEBA_GRATIS',
             clasesPorSemana: 7, // sin restricción semanal durante la prueba
             saldoClases: dias,
+            fechaVencimiento: vence,
             familiaId: familia.id,
           },
         });
@@ -326,11 +331,20 @@ function crearFamiliaService(prisma) {
           'El paquete no tiene precio en el catálogo; registra el pago por separado o pide a la Propietaria fijar el precio');
       }
 
+      // Vigencia (RF-03): si la plantilla define duración, el paquete vence
+      // hoy + duracionDias; sin duración, no vence (fechaVencimiento null)
+      let fechaVencimiento = null;
+      if (plantilla.duracionDias) {
+        fechaVencimiento = new Date();
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + plantilla.duracionDias);
+      }
+
       const paquete = await tx.paquete.create({
         data: {
           tipo: plantilla.tipo,
           clasesPorSemana: plantilla.clasesPorSemana,
           saldoClases: plantilla.saldoClases,
+          fechaVencimiento,
           familiaId: familia.id,
         },
       });

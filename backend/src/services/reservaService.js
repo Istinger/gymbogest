@@ -21,6 +21,8 @@ class ReservaDuplicadaError extends Error {}
 class ChoqueHorarioError extends Error {}
 // Extensión CU-01: un niño dado de baja (inactivo) no puede reservar
 class NinoInactivoError extends Error {}
+// Extensión RF-03: el tiempo del paquete terminó — no puede reservar aunque tenga saldo
+class PaqueteVencidoError extends Error {}
 
 function crearReservaService(prisma) {
   async function reservarClase({ ninoId, claseId, paqueteId, usuarioId }) {
@@ -76,6 +78,13 @@ function crearReservaService(prisma) {
       if (!paquete || paquete.saldoClases <= 0) {
         // CU-02, excepción paso 4: sin saldo
         throw new SinSaldoError('El paquete no tiene clases disponibles');
+      }
+      // Extensión RF-03: vigencia — un paquete vencido no reserva aunque
+      // tenga saldo (null = no vence: contratos antiguos / sin duración)
+      if (paquete.fechaVencimiento && new Date(paquete.fechaVencimiento) < new Date()) {
+        const vencio = new Date(paquete.fechaVencimiento).toLocaleDateString('es-EC');
+        throw new PaqueteVencidoError(
+          `El paquete venció el ${vencio}. Renueva o contrata otro paquete para seguir reservando.`);
       }
 
       // 6: registrarReserva() y descontar del paquete (atomicidad ACID)
@@ -180,5 +189,5 @@ function crearReservaService(prisma) {
 
 module.exports = {
   crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
-  NinoInactivoError,
+  NinoInactivoError, PaqueteVencidoError,
 };

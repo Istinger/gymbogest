@@ -144,6 +144,7 @@ model PaqueteCatalogo {
   clasesPorSemana Int     // 1 a 7 (entrevista)
   saldoClases     Int     // clases incluidas al contratarlo
   precio          Float?
+  duracionDias    Int?    // vigencia al contratar (1–365); null = no vence
   activo          Boolean @default(true) // inactivo: no se ofrece, sin borrar historial
 }
 
@@ -160,6 +161,8 @@ model Paquete {
   tipo            String  // mensual, trimestral...
   clasesPorSemana Int     // 1 a 7 (entrevista)
   saldoClases     Int
+  // Vigencia (RF-03): reservar con paquete vencido se rechaza. null = no vence
+  fechaVencimiento DateTime?
 
   familia   Familia @relation("contrata", fields: [familiaId], references: [id])
   familiaId Int
