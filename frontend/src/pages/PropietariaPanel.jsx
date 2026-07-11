@@ -57,10 +57,11 @@ export function PropietariaPanel() {
               onClick={() => setSeccion(tab.id)}
               style={{
                 padding: '0.7rem 1.4rem',
-                backgroundColor: seccion === tab.id ? '#667eea' : 'white',
-                color: seccion === tab.id ? 'white' : '#333',
-                border: '1px solid #ddd',
-                borderRadius: '6px',
+                // Acento único de la marca para el estado activo (60-30-10)
+                backgroundColor: seccion === tab.id ? '#F7941E' : 'var(--color-surface, #fff)',
+                color: seccion === tab.id ? '#fff' : 'var(--color-fg, #333)',
+                border: '1px solid var(--color-border, #ddd)',
+                borderRadius: '999px',
                 cursor: 'pointer',
                 fontWeight: 600,
                 fontSize: '0.95rem',
@@ -100,113 +101,216 @@ function TableroIndicadores() {
     );
   }
 
-  const canales = tablero.inscripcionesPorCanal || [];
+  const canales = (tablero.inscripcionesPorCanal || []).slice().sort((a, b) => b.total - a.total);
   const maxCanal = Math.max(1, ...canales.map((c) => c.total));
+  const totalCanales = canales.reduce((s, c) => s + c.total, 0);
   const conversion = tablero.conversion || {};
-
-  const cardStyle = {
-    padding: '1.2rem',
-    borderRadius: '8px',
-    backgroundColor: '#f5f6ff',
-    border: '1px solid #e0e3ff',
-    textAlign: 'center',
-  };
+  const asistencia = tablero.asistenciaPorClase || [];
+  const totales = asistencia.reduce(
+    (acc, a) => ({ asistio: acc.asistio + a.asistio, falto: acc.falto + a.falto, prueba: acc.prueba + a.prueba }),
+    { asistio: 0, falto: 0, prueba: 0 },
+  );
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <div style={cardStyle}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#667eea' }}>{tablero.ninosActivos}</div>
-          <div style={{ color: '#666', fontSize: '0.9rem' }}>Niños activos</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#667eea' }}>{tablero.inscritos?.total ?? 0}</div>
-          <div style={{ color: '#666', fontSize: '0.9rem' }}>Familias inscritas (último mes)</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#667eea' }}>
-            {Math.round((conversion.tasaConversion || 0) * 100)}%
-          </div>
-          <div style={{ color: '#666', fontSize: '0.9rem' }}>
-            Conversión clase de prueba ({conversion.convertidos ?? 0}/{conversion.probaron ?? 0})
-          </div>
-        </div>
+      {/* KPIs: número grande + contexto, un tinte suave por tarjeta (60-30-10) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        <KpiCard icono="🧒" valor={tablero.ninosActivos} etiqueta="Niños activos" color={PALETA.naranja} tinte={PALETA.naranjaSoft} />
+        <KpiCard icono="👨‍👩‍👧" valor={tablero.inscritos?.total ?? 0} etiqueta="Familias inscritas (último mes)" color={PALETA.azul} tinte={PALETA.azulSoft} />
+        <KpiCard
+          icono="🎈"
+          valor={`${Math.round((conversion.tasaConversion || 0) * 100)}%`}
+          etiqueta={`Conversión de prueba (${conversion.convertidos ?? 0} de ${conversion.probaron ?? 0})`}
+          color={PALETA.verde} tinte={PALETA.verdeSoft}
+        />
+        <KpiCard
+          icono="✅"
+          valor={totales.asistio + totales.falto + totales.prueba}
+          etiqueta="Asistencias registradas (último mes)"
+          color={PALETA.morado} tinte={PALETA.moradoSoft}
+        />
       </div>
 
-      {/* Métrica clave de la estrategia MAX-MAX: inscripciones por canal */}
-      <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '8px', border: '2px solid #667eea', backgroundColor: '#fbfbff' }}>
-        <h3 style={{ marginBottom: '0.3rem' }}>⭐ Inscripciones por canal de origen</h3>
-        <p style={{ color: '#888', fontSize: '0.85rem', marginBottom: '1rem' }}>
-          Métrica de la estrategia MAX-MAX: mide qué canal (redes, pediatras aliados, empresas, referidos) trae más familias.
-        </p>
-        {canales.length === 0 ? (
-          <p style={{ color: '#999' }}>Sin inscripciones en el último mes</p>
-        ) : (
-          canales
-            .slice()
-            .sort((a, b) => b.total - a.total)
-            .map((c) => (
-              <div key={c.canal} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.6rem' }}>
-                <span style={{ width: '180px', fontSize: '0.9rem', fontWeight: 600 }}>
-                  {CANAL_LABELS[c.canal] || c.canal}
-                </span>
-                <div style={{ flex: 1, backgroundColor: '#eee', borderRadius: '6px', overflow: 'hidden', height: '26px' }}>
-                  <div
-                    style={{
-                      width: `${(c.total / maxCanal) * 100}%`,
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #667eea, #764ba2)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      paddingRight: '0.5rem',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: '0.85rem',
-                      minWidth: '2rem',
-                    }}
-                  >
-                    {c.total}
-                  </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+        {/* Métrica clave de la estrategia MAX-MAX: inscripciones por canal */}
+        <PanelCard titulo="⭐ Inscripciones por canal de origen"
+          descripcion="Estrategia MAX-MAX: qué canal trae más familias. El líder se destaca en el naranja de la marca.">
+          {canales.length === 0 ? (
+            <p style={{ color: 'var(--color-muted, #999)' }}>Sin inscripciones en el último mes</p>
+          ) : (
+            canales.map((c, i) => (
+              <div key={c.canal} style={{ marginBottom: '0.9rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                  <span style={{ fontWeight: 600 }}>{CANAL_LABELS[c.canal] || c.canal}</span>
+                  <span style={{ color: 'var(--color-muted, #888)' }}>
+                    <strong style={{ color: 'var(--color-fg, #333)' }}>{c.total}</strong>
+                    {totalCanales > 0 && ` · ${Math.round((c.total / totalCanales) * 100)}%`}
+                  </span>
+                </div>
+                <div style={{ backgroundColor: 'var(--color-border, #eee)', borderRadius: '999px', overflow: 'hidden', height: '12px' }}>
+                  <div style={{
+                    width: `${(c.total / maxCanal) * 100}%`,
+                    height: '100%',
+                    borderRadius: '999px',
+                    // color sólido (data-ink): líder = naranja de marca, resto = categóricos apagados
+                    backgroundColor: i === 0 ? PALETA.naranja : PALETA.categoricos[i % PALETA.categoricos.length],
+                    transition: 'width 300ms ease-out',
+                  }} />
                 </div>
               </div>
             ))
-        )}
+          )}
+        </PanelCard>
+
+        {/* Conversión de clases de prueba: dona SVG con el % al centro */}
+        <PanelCard titulo="🎯 Conversión de clases de prueba"
+          descripcion="Niños que probaron una clase gratis y se inscribieron en un paquete.">
+          {(conversion.probaron ?? 0) === 0 ? (
+            <p style={{ color: 'var(--color-muted, #999)' }}>Aún no hay clases de prueba registradas</p>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <DonutChart
+                porcentaje={(conversion.tasaConversion || 0) * 100}
+                color={PALETA.naranja}
+              />
+              <div style={{ fontSize: '0.9rem', display: 'grid', gap: '0.5rem' }}>
+                <LeyendaItem color={PALETA.naranja} texto={`${conversion.convertidos} se inscribieron`} />
+                <LeyendaItem color="var(--color-border, #e5e5e5)" texto={`${(conversion.probaron ?? 0) - (conversion.convertidos ?? 0)} aún no se inscriben`} />
+                <span style={{ color: 'var(--color-muted, #888)', fontSize: '0.8rem' }}>
+                  {conversion.probaron} niño{conversion.probaron !== 1 ? 's' : ''} probaron una clase
+                </span>
+              </div>
+            </div>
+          )}
+        </PanelCard>
       </div>
 
       <SeguimientoFaltas />
 
-      <h3 style={{ marginBottom: '1rem' }}>Asistencia por clase</h3>
-      {(tablero.asistenciaPorClase || []).length === 0 ? (
-        <p style={{ color: '#999' }}>Sin registros de asistencia en el último mes</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
-              <th style={{ padding: '0.6rem' }}>Clase</th>
-              <th style={{ padding: '0.6rem' }}>✅ Asistió</th>
-              <th style={{ padding: '0.6rem' }}>❌ Faltó</th>
-              <th style={{ padding: '0.6rem' }}>🎈 Prueba</th>
-            </tr>
-          </thead>
-          <tbody>
-            {tablero.asistenciaPorClase.map((a) => (
-              <tr key={a.claseId} style={{ borderBottom: '1px solid #f5f5f5' }}>
-                <td style={{ padding: '0.6rem' }}>{PROGRAMAS[a.programa] || a.programa} (clase {a.claseId})</td>
-                <td style={{ padding: '0.6rem', color: '#27ae60', fontWeight: 600 }}>{a.asistio}</td>
-                <td style={{ padding: '0.6rem', color: '#e74c3c', fontWeight: 600 }}>{a.falto}</td>
-                <td style={{ padding: '0.6rem', color: '#f39c12', fontWeight: 600 }}>{a.prueba}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      {/* Asistencia por clase: barras apiladas (una fila por clase) */}
+      <PanelCard titulo="🗒️ Asistencia por clase (último mes)"
+        descripcion="Proporción de asistencias, faltas y clases de prueba en cada clase.">
+        {asistencia.length === 0 ? (
+          <p style={{ color: 'var(--color-muted, #999)' }}>Sin registros de asistencia en el último mes</p>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: '1.2rem', flexWrap: 'wrap', marginBottom: '1rem', fontSize: '0.85rem' }}>
+              <LeyendaItem color={PALETA.verde} texto={`Asistió (${totales.asistio})`} />
+              <LeyendaItem color={PALETA.rojo} texto={`Faltó (${totales.falto})`} />
+              <LeyendaItem color={PALETA.ambar} texto={`Clase de prueba (${totales.prueba})`} />
+            </div>
+            {asistencia.map((a) => {
+              const total = a.asistio + a.falto + a.prueba;
+              return (
+                <div key={a.claseId} style={{ marginBottom: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '0.25rem' }}>
+                    <span style={{ fontWeight: 600 }}>{PROGRAMAS[a.programa] || a.programa} <span style={{ color: 'var(--color-muted, #888)', fontWeight: 400 }}>(clase {a.claseId})</span></span>
+                    <span style={{ color: 'var(--color-muted, #888)' }}>{a.asistio}✓ · {a.falto}✗ · {a.prueba}🎈</span>
+                  </div>
+                  <div style={{ display: 'flex', height: '14px', borderRadius: '999px', overflow: 'hidden', backgroundColor: 'var(--color-border, #eee)' }}>
+                    {total > 0 && (
+                      <>
+                        <div style={{ width: `${(a.asistio / total) * 100}%`, backgroundColor: PALETA.verde }} title={`Asistió: ${a.asistio}`} />
+                        <div style={{ width: `${(a.falto / total) * 100}%`, backgroundColor: PALETA.rojo }} title={`Faltó: ${a.falto}`} />
+                        <div style={{ width: `${(a.prueba / total) * 100}%`, backgroundColor: PALETA.ambar }} title={`Prueba: ${a.prueba}`} />
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </PanelCard>
     </div>
   );
 }
 
+// ---------- Piezas del tablero (sin librerías: SVG/CSS puros, colores de la marca) ----------
+// Paleta: naranja Gymboree como acento único; categóricos apagados que no compiten.
+// Los "Soft" son tintes al 12% para fondos de tarjeta (calmos, estilo Streamlit).
+const PALETA = {
+  naranja: '#F7941E', naranjaSoft: 'rgba(247, 148, 30, 0.12)',
+  azul: '#046BD2', azulSoft: 'rgba(4, 107, 210, 0.10)',
+  verde: '#27AE60', verdeSoft: 'rgba(39, 174, 96, 0.10)',
+  morado: '#8E44AD', moradoSoft: 'rgba(142, 68, 173, 0.10)',
+  rojo: '#E74C3C',
+  ambar: '#F0B429',
+  categoricos: ['#F7941E', '#046BD2', '#27AE60', '#8E44AD', '#16A085', '#C05621'],
+};
+
+function KpiCard({ icono, valor, etiqueta, color, tinte }) {
+  return (
+    <div style={{
+      padding: '1.1rem 1.2rem',
+      borderRadius: '14px', // radios generosos de la marca
+      backgroundColor: tinte,
+      border: '1px solid var(--color-border, #e5e5e5)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.9rem',
+    }}>
+      <span aria-hidden="true" style={{ fontSize: '1.6rem' }}>{icono}</span>
+      <div>
+        <div style={{ fontSize: '1.9rem', fontWeight: 800, lineHeight: 1.1, color, fontFamily: "'Baloo 2', var(--font-display, inherit)" }}>
+          {valor}
+        </div>
+        <div style={{ color: 'var(--color-muted, #666)', fontSize: '0.82rem', lineHeight: 1.3 }}>{etiqueta}</div>
+      </div>
+    </div>
+  );
+}
+
+function PanelCard({ titulo, descripcion, children }) {
+  return (
+    <div style={{
+      marginBottom: '1.5rem',
+      padding: '1.4rem',
+      borderRadius: '14px',
+      border: '1px solid var(--color-border, #e5e5e5)',
+      backgroundColor: 'var(--color-surface, #fff)',
+    }}>
+      <h3 style={{ marginBottom: '0.25rem' }}>{titulo}</h3>
+      <p style={{ color: 'var(--color-muted, #888)', fontSize: '0.82rem', marginBottom: '1.1rem' }}>{descripcion}</p>
+      {children}
+    </div>
+  );
+}
+
+// Dona SVG accesible: % al centro, sin degradados ni sombras (data-ink ≥80%)
+function DonutChart({ porcentaje, color, tamano = 120 }) {
+  const r = 44;
+  const circunferencia = 2 * Math.PI * r;
+  const lleno = (Math.min(100, Math.max(0, porcentaje)) / 100) * circunferencia;
+  return (
+    <svg width={tamano} height={tamano} viewBox="0 0 120 120" role="img"
+      aria-label={`${Math.round(porcentaje)} por ciento de conversión`}>
+      <circle cx="60" cy="60" r={r} fill="none" stroke="var(--color-border, #e5e5e5)" strokeWidth="14" />
+      <circle
+        cx="60" cy="60" r={r} fill="none" stroke={color} strokeWidth="14" strokeLinecap="round"
+        strokeDasharray={`${lleno} ${circunferencia - lleno}`}
+        transform="rotate(-90 60 60)"
+      />
+      <text x="60" y="60" textAnchor="middle" dominantBaseline="central"
+        style={{ fontSize: '24px', fontWeight: 800, fill: 'var(--color-fg, #333)', fontFamily: "'Baloo 2', sans-serif" }}>
+        {Math.round(porcentaje)}%
+      </text>
+    </svg>
+  );
+}
+
+function LeyendaItem({ color, texto }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
+      <span style={{ width: '12px', height: '12px', borderRadius: '4px', backgroundColor: color, flexShrink: 0 }} />
+      {texto}
+    </span>
+  );
+}
+
 // ---------- Calendario mensual: qué educadora imparte qué clase y a qué hora ----------
-const COLORES_EDUCADORA = ['#667eea', '#27ae60', '#e67e22', '#e74c3c', '#16a085', '#8e44ad'];
+// Misma paleta categórica del tablero (naranja de marca primero)
+const COLORES_EDUCADORA = ['#F7941E', '#046BD2', '#27AE60', '#8E44AD', '#E74C3C', '#16A085'];
 
 function CalendarioMensual({ clases }) {
   const [mes, setMes] = useState(() => {
@@ -246,7 +350,7 @@ function CalendarioMensual({ clases }) {
     new Date(fechaHora).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '8px', border: '1px solid #e0e3ff', backgroundColor: '#fbfbff' }}>
+    <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '14px', border: '1px solid var(--color-border, #e5e5e5)', backgroundColor: 'var(--color-surface, #fff)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0 }}>🗓️ Calendario de educadoras</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
@@ -280,14 +384,14 @@ function CalendarioMensual({ clases }) {
             style={{
               minHeight: '84px',
               borderRadius: '6px',
-              border: dia ? (esHoy(dia) ? '2px solid #667eea' : '1px solid #eee') : 'none',
+              border: dia ? (esHoy(dia) ? '2px solid #F7941E' : '1px solid var(--color-border, #eee)') : 'none',
               backgroundColor: dia ? 'white' : 'transparent',
               padding: '0.3rem',
             }}
           >
             {dia && (
               <>
-                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: esHoy(dia) ? '#667eea' : '#aaa', marginBottom: '0.2rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: esHoy(dia) ? '#C05621' : '#aaa', marginBottom: '0.2rem' }}>
                   {dia}
                 </div>
                 {(porDia[dia] || []).map((c) => {
@@ -629,7 +733,7 @@ function ProgramarClases() {
           disabled={!hayFiltros}
           style={{
             padding: '0.7rem 1rem',
-            backgroundColor: hayFiltros ? '#667eea' : '#ddd',
+            backgroundColor: hayFiltros ? '#F7941E' : '#ddd',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
@@ -678,7 +782,7 @@ function ProgramarClases() {
                   <td style={{ padding: '0.6rem' }}>
                     <button
                       onClick={() => setEditando(c)}
-                      style={{ padding: '0.4rem 0.8rem', backgroundColor: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
+                      style={{ padding: '0.4rem 0.8rem', backgroundColor: '#F7941E', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}
                     >
                       ✏️ Editar
                     </button>
