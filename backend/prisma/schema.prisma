@@ -122,6 +122,9 @@ model Nino {
   nombres          String
   fechaNacimiento  DateTime
   observacionSalud String?
+  // Baja suave (extensión CU-01): un niño inactivo no puede reservar,
+  // pero su historial (reservas, asistencias, progresos) se conserva (LOPDP)
+  activo           Boolean  @default(true)
 
   // COMPOSICIÓN: si se elimina la Familia, se eliminan sus Niños
   familia   Familia @relation("contiene", fields: [familiaId], references: [id], onDelete: Cascade)

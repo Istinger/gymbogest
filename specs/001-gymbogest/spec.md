@@ -17,7 +17,21 @@ Como RECEPCION o TUTOR quiero registrar a un niño con su tutor y el canal de or
 - [ ] Crea Familia + Nino + Tutor(Persona) en una sola operación.
 - [ ] canalOrigen ∈ {REDES, PEDIATRA_ALIADO, EMPRESA, REFERIDO}.
 - [ ] Si la cédula del tutor ya existe → ofrece asociar el niño a la familia existente (no duplica).
+- [ ] Una familia no puede tener dos niños con el mismo nombre (comparación sin mayúsculas/tildes); aplica al asociar y al renombrar en la edición.
 - [ ] Campos obligatorios validados; correo y cédula con formato correcto.
+- [ ] El correo debe pertenecer a un proveedor conocido (gmail, hotmail, outlook, yahoo, icloud, proton) — mismo criterio que el sign up (RNF-01).
+- [ ] La cédula se valida con el algoritmo ecuatoriano (provincia 01–24, tercer dígito 0–5, dígito verificador módulo 10).
+
+#### Extensión CU-01 · Corregir datos de la inscripción (typos)
+Como RECEPCION o PROPIETARIA quiero corregir datos mal tipeados del tutor o del niño.
+**Aceptación:**
+- [ ] RECEPCION y PROPIETARIA editan nombre, teléfono, correo, parentesco y datos del niño.
+- [ ] La CÉDULA del tutor solo la corrige la PROPIETARIA (es la clave que deduplica familias, exc. 6); Recepción recibe 403.
+- [ ] El correo/cédula corregidos pasan las mismas validaciones del registro.
+- [ ] Toda edición queda auditada (trigger sobre Persona/Tutor/Nino con `app.usuario_id`).
+- [ ] RECEPCION/PROPIETARIA pueden dar de baja a un niño (estado inactivo) y reactivarlo. La baja es SUAVE: conserva reservas, asistencias y progresos (LOPDP) — nunca se borra el registro.
+- [ ] Un niño inactivo no puede recibir reservas nuevas (la API responde 409 con mensaje claro).
+- [ ] Al dar de baja, sus reservas ACTIVAS de clases FUTURAS se cancelan devolviendo el saldo al paquete; las clases pasadas/en curso se conservan como historial. Las canceladas dejan de contar en el cupo y de mostrarse en la agenda del día.
 
 ### HF-2 · Programar clases (RF-02)
 Como RECEPCION quiero crear clases por programa y horario con cupo máximo 9.

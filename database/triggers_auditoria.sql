@@ -43,7 +43,8 @@ $$ LANGUAGE plpgsql;
 DO $$
 DECLARE t TEXT;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['Familia','Nino','Tutor','Paquete','Reserva','Pago','MaterialDidactico','Asistencia']
+  -- Persona incluida: nombres/cédula/correo del tutor viven ahí y ahora son editables (extensión CU-01)
+  FOREACH t IN ARRAY ARRAY['Persona','Familia','Nino','Tutor','Paquete','Reserva','Pago','MaterialDidactico','Asistencia']
   LOOP
     EXECUTE format('DROP TRIGGER IF EXISTS trg_auditoria_%s ON %I', lower(t), t);
     EXECUTE format(

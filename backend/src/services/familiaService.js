@@ -14,6 +14,22 @@
 class ValidacionError extends Error {}
 
 const CANALES = ['REDES', 'PEDIATRA_ALIADO', 'EMPRESA', 'REFERIDO'];
+const PARENTESCOS = ['padre', 'madre', 'abuelo', 'abuela', 'otro'];
+
+// Validaciones compartidas con usuarioService (mismo criterio en cuentas e inscripciones)
+const { motivoCorreoInvalido, esCedulaEcuatorianaValida } = require('./validaciones');
+
+// Comparación de nombres sin mayúsculas ni tildes ("Emilia" ≈ "emilía")
+const normalizarNombre = (n) =>
+  (n || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Regla: una familia no puede tener dos niños con el mismo nombre
+async function buscarHermanoHomonimo(clienteDb, familiaId, nombres, exceptoNinoId = null) {
+  const hermanos = await clienteDb.nino.findMany({ where: { familiaId } });
+  const objetivo = normalizarNombre(nombres);
+  return hermanos.find((h) =>
+    h.id !== exceptoNinoId && normalizarNombre(h.nombres) === objetivo) || null;
+}
 
 // 3: validarDatos() — validaciones de formato (CU-01, excepción paso 6b)
 function validarDatos({ nino, tutor, canalOrigen }) {
@@ -29,12 +45,11 @@ function validarDatos({ nino, tutor, canalOrigen }) {
   if (faltantes.length) {
     throw new ValidacionError(`Campos obligatorios faltantes: ${faltantes.join(', ')}`);
   }
-  if (!/^\d{10}$/.test(tutor.cedula)) {
-    throw new ValidacionError('La cédula debe tener 10 dígitos');
+  if (!esCedulaEcuatorianaValida(tutor.cedula)) {
+    throw new ValidacionError('La cédula no es una cédula ecuatoriana válida (verifica los 10 dígitos)');
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(tutor.correo)) {
-    throw new ValidacionError('El correo no tiene un formato válido');
-  }
+  const motivoCorreo = motivoCorreoInvalido(tutor.correo);
+  if (motivoCorreo) throw new ValidacionError(motivoCorreo);
   if (!CANALES.includes(canalOrigen)) {
     throw new ValidacionError(`canalOrigen debe ser uno de: ${CANALES.join(', ')}`);
   }
@@ -61,6 +76,15 @@ function crearFamiliaService(prisma) {
 
       // T05 · CU-01 exc. 6: la cédula ya existe → asociar, no duplicar
       if (personaExistente?.tutor) {
+        // Un solo tutor no puede tener dos niños con el mismo nombre
+        const homonimo = await buscarHermanoHomonimo(
+          tx, personaExistente.tutor.familiaId, nino.nombres,
+        );
+        if (homonimo) {
+          throw new ValidacionError(
+            `Esta familia ya tiene registrado un niño llamado "${homonimo.nombres}". `
+            + 'Si es otro niño, diferencia el nombre (p. ej. con el segundo nombre).');
+        }
         const ninoNuevo = await tx.nino.create({
           data: {
             nombres: nino.nombres,
@@ -131,7 +155,127 @@ function crearFamiliaService(prisma) {
     });
   }
 
-  return { registrarFamilia, listarFamilias, obtenerFamilia };
+  // Corrección de typos en la inscripción (extensión de CU-01).
+  // RECEPCION y PROPIETARIA editan datos de contacto; cambiar la CÉDULA
+  // (clave de identidad usada para deduplicar familias, T05) requiere
+  // permitirCedula=true, que la ruta concede solo a PROPIETARIA.
+  async function actualizarTutor(tutorId, datos, { usuarioId, permitirCedula = false } = {}) {
+    const tutor = await prisma.tutor.findUnique({
+      where: { id: Number(tutorId) },
+      include: { persona: true },
+    });
+    if (!tutor) throw new ValidacionError('El tutor no existe');
+
+    const dataPersona = {};
+    if (datos.nombres !== undefined) {
+      if (!datos.nombres.trim()) throw new ValidacionError('El nombre no puede quedar vacío');
+      dataPersona.nombres = datos.nombres.trim();
+    }
+    if (datos.telefono !== undefined) dataPersona.telefono = datos.telefono;
+    if (datos.correo !== undefined) {
+      const motivo = motivoCorreoInvalido(datos.correo);
+      if (motivo) throw new ValidacionError(motivo);
+      dataPersona.correo = datos.correo;
+    }
+    if (datos.cedula !== undefined && datos.cedula !== tutor.persona.cedula) {
+      if (!permitirCedula) {
+        throw new ValidacionError('Solo la Propietaria puede corregir la cédula de un tutor');
+      }
+      if (!esCedulaEcuatorianaValida(datos.cedula)) {
+        throw new ValidacionError('La cédula no es una cédula ecuatoriana válida (verifica los 10 dígitos)');
+      }
+      const ocupada = await prisma.persona.findUnique({ where: { cedula: datos.cedula } });
+      if (ocupada && ocupada.id !== tutor.personaId) {
+        throw new ValidacionError('Ya existe otra persona con esa cédula');
+      }
+      dataPersona.cedula = datos.cedula;
+    }
+
+    const dataTutor = {};
+    if (datos.parentesco !== undefined) {
+      if (!PARENTESCOS.includes(datos.parentesco)) {
+        throw new ValidacionError(`parentesco debe ser uno de: ${PARENTESCOS.join(', ')}`);
+      }
+      dataTutor.parentesco = datos.parentesco;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      if (usuarioId) {
+        await tx.$executeRawUnsafe(`SET LOCAL app.usuario_id = '${Number(usuarioId)}'`);
+      }
+      if (Object.keys(dataPersona).length) {
+        await tx.persona.update({ where: { id: tutor.personaId }, data: dataPersona });
+      }
+      if (Object.keys(dataTutor).length) {
+        await tx.tutor.update({ where: { id: tutor.id }, data: dataTutor });
+      }
+      return tx.tutor.findUnique({ where: { id: tutor.id }, include: { persona: true } });
+    });
+  }
+
+  async function actualizarNino(ninoId, datos, { usuarioId } = {}) {
+    const nino = await prisma.nino.findUnique({ where: { id: Number(ninoId) } });
+    if (!nino) throw new ValidacionError('El niño no existe');
+
+    const data = {};
+    if (datos.nombres !== undefined) {
+      if (!datos.nombres.trim()) throw new ValidacionError('El nombre no puede quedar vacío');
+      // Renombrar no puede chocar con un hermano de la misma familia
+      const homonimo = await buscarHermanoHomonimo(prisma, nino.familiaId, datos.nombres, nino.id);
+      if (homonimo) {
+        throw new ValidacionError(
+          `Esta familia ya tiene registrado un niño llamado "${homonimo.nombres}".`);
+      }
+      data.nombres = datos.nombres.trim();
+    }
+    if (datos.fechaNacimiento !== undefined) {
+      if (isNaN(Date.parse(datos.fechaNacimiento))) {
+        throw new ValidacionError('fechaNacimiento no es una fecha válida');
+      }
+      data.fechaNacimiento = new Date(datos.fechaNacimiento);
+    }
+    if (datos.observacionSalud !== undefined) data.observacionSalud = datos.observacionSalud || null;
+    // Baja suave: inactivo conserva historial (LOPDP) pero no puede reservar
+    if (datos.activo !== undefined) {
+      if (typeof datos.activo !== 'boolean') {
+        throw new ValidacionError('activo debe ser true o false');
+      }
+      data.activo = datos.activo;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      if (usuarioId) {
+        await tx.$executeRawUnsafe(`SET LOCAL app.usuario_id = '${Number(usuarioId)}'`);
+      }
+      const actualizado = await tx.nino.update({ where: { id: nino.id }, data });
+
+      // Baja suave: cancelar SOLO las reservas ACTIVAS de clases FUTURAS,
+      // devolviendo el saldo al paquete (mismo efecto que cancelarReserva).
+      // Las clases pasadas/en curso se conservan como historial, y al quedar
+      // canceladas las futuras dejan de contar/mostrarse en la agenda del día.
+      let reservasCanceladas = 0;
+      if (data.activo === false) {
+        const futuras = await tx.reserva.findMany({
+          where: {
+            ninoId: nino.id,
+            estado: 'ACTIVA',
+            clase: { fechaHora: { gt: new Date() } },
+          },
+        });
+        for (const reserva of futuras) {
+          await tx.reserva.update({ where: { id: reserva.id }, data: { estado: 'CANCELADA' } });
+          await tx.paquete.update({
+            where: { id: reserva.paqueteId },
+            data: { saldoClases: { increment: 1 } },
+          });
+        }
+        reservasCanceladas = futuras.length;
+      }
+      return { ...actualizado, reservasCanceladas };
+    });
+  }
+
+  return { registrarFamilia, listarFamilias, obtenerFamilia, actualizarTutor, actualizarNino };
 }
 
 module.exports = { crearFamiliaService, ValidacionError, CANALES };

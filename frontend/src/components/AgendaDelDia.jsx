@@ -9,6 +9,9 @@ const PROGRAMAS = {
   PLAYLAB: '🧪 PlayLab',
 };
 
+// Color estable por educadora (mismo lenguaje que el calendario mensual de Propietaria)
+const COLORES_EDUCADORA = ['#F7941E', '#046BD2', '#27AE60', '#8E44AD', '#E74C3C', '#16A085'];
+
 export function AgendaDelDia() {
   const { agenda, loading, getAgenda } = useData();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -17,30 +20,42 @@ export function AgendaDelDia() {
     getAgenda(selectedDate);
   }, [selectedDate, getAgenda]);
 
-  const formatHora = (fechaHora) => {
-    const date = new Date(fechaHora);
-    return date.toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
-  };
+  const formatHora = (fechaHora) =>
+    new Date(fechaHora).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' });
 
-  const getOcupacionColor = (ocupacion, cupoMaximo) => {
-    const porcentaje = (ocupacion / cupoMaximo) * 100;
-    if (porcentaje >= 100) return '#e74c3c'; // Rojo - lleno
-    if (porcentaje >= 80) return '#f39c12'; // Naranja - casi lleno
-    return '#27ae60'; // Verde - con espacio
-  };
+  // Leyenda: color por educadora, según orden de aparición
+  const nombresEducadoras = [...new Set(agenda.map((c) => c.educadora || 'Sin asignar'))];
+  const colorDe = (nombre) => COLORES_EDUCADORA[nombresEducadoras.indexOf(nombre) % COLORES_EDUCADORA.length];
+
+  // Agrupar clases por HORA del día. Varias clases en la misma franja se
+  // apilan lado a lado (flex-wrap): nunca se solapan visualmente.
+  const porHora = {};
+  for (const clase of agenda) {
+    const h = new Date(clase.hora).getHours();
+    (porHora[h] ??= []).push(clase);
+  }
+  Object.values(porHora).forEach((lista) => lista.sort((a, b) => new Date(a.hora) - new Date(b.hora)));
+
+  // Rango horario visible: 9:00–17:00 como base, extendido si hay clases fuera
+  const horasConClase = Object.keys(porHora).map(Number);
+  const horaInicio = Math.min(9, ...(horasConClase.length ? horasConClase : [9]));
+  const horaFin = Math.max(17, ...(horasConClase.length ? horasConClase : [17]));
+  const horas = Array.from({ length: horaFin - horaInicio + 1 }, (_, i) => horaInicio + i);
 
   return (
     <div style={{ marginTop: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h3>Agenda del Día</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem', marginBottom: '1rem' }}>
+        <h3 style={{ margin: 0 }}>🗓️ Agenda del Día</h3>
         <input
           type="date"
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
           style={{
-            padding: '0.75rem',
-            borderRadius: '4px',
-            border: '1px solid #ddd',
+            padding: '0.6rem 0.8rem',
+            borderRadius: 'var(--radius-sm)',
+            border: '1px solid var(--color-border)',
+            background: 'var(--color-bg)',
+            color: 'var(--color-fg)',
             fontSize: '1rem',
           }}
         />
@@ -51,67 +66,69 @@ export function AgendaDelDia() {
           <div className="spinner"></div>
         </div>
       ) : agenda.length === 0 ? (
-        <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: '#f9f9f9', borderRadius: '8px', color: '#999' }}>
+        <div style={{ padding: '2rem', textAlign: 'center', backgroundColor: 'var(--color-bg)', borderRadius: 'var(--radius-md)', color: 'var(--color-muted)' }}>
           <p>No hay clases programadas para este día</p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-          {agenda.map((clase) => {
-            // La API de agenda entrega ocupacion como "X / 9" (formato del wireframe)
-            const [usado, maximo] = clase.ocupacion.split('/').map((n) => parseInt(n, 10));
+        <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+          {/* Leyenda: color por educadora */}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', padding: '0.8rem 1rem', borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-bg)' }}>
+            {nombresEducadoras.map((nombre) => (
+              <span key={nombre} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: colorDe(nombre) }} />
+                {nombre}
+              </span>
+            ))}
+          </div>
+
+          {/* Grilla horaria del día */}
+          {horas.map((h) => {
+            const clasesHora = porHora[h] || [];
             return (
               <div
-                key={clase.id}
+                key={h}
                 style={{
-                  backgroundColor: 'var(--color-surface)',
-                  borderRadius: '8px',
-                  border: '1px solid #eee',
-                  padding: '1.5rem',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                  transition: 'all 0.3s',
+                  display: 'grid',
+                  gridTemplateColumns: '64px 1fr',
+                  borderBottom: h === horaFin ? 'none' : '1px solid var(--color-border)',
+                  minHeight: '52px',
+                  backgroundColor: clasesHora.length ? 'var(--color-surface)' : 'var(--color-bg)',
                 }}
               >
-                <div style={{ marginBottom: '1rem' }}>
-                  <h4 style={{ color: '#667eea', marginBottom: '0.5rem' }}>
-                    {PROGRAMAS[clase.programa] || clase.programa}
-                  </h4>
-                  <p style={{ color: '#666', fontSize: '0.9rem' }}>
-                    ⏰ {formatHora(clase.hora)}
-                  </p>
+                <div style={{ padding: '0.5rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-muted)', fontVariantNumeric: 'tabular-nums', borderRight: '1px solid var(--color-border)' }}>
+                  {String(h).padStart(2, '0')}:00
                 </div>
 
-                <div
-                  style={{
-                    backgroundColor: getOcupacionColor(usado, maximo),
-                    color: 'white',
-                    padding: '1rem',
-                    borderRadius: '6px',
-                    textAlign: 'center',
-                    marginBottom: '1rem',
-                  }}
-                >
-                  <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>
-                    {clase.ocupacion}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
-                    {maximo - usado} espacio(s) disponible(s)
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                  {clase.cupoLleno ? (
-                    <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>❌ Clase Llena</span>
-                  ) : usado >= maximo * 0.8 ? (
-                    <span style={{ color: '#f39c12', fontWeight: 'bold' }}>⚠️ Casi Llena</span>
-                  ) : (
-                    <span style={{ color: '#27ae60', fontWeight: 'bold' }}>✅ Con Cupo</span>
-                  )}
-                </div>
-
-                <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
-                  <p style={{ fontSize: '0.85rem', color: '#999', margin: 0 }}>
-                    Educadora: <strong>{clase.educadora || 'No asignada'}</strong>
-                  </p>
+                {/* Clases de la franja: lado a lado, con salto de línea si no caben */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', padding: '0.4rem', alignItems: 'flex-start' }}>
+                  {clasesHora.map((clase) => (
+                    <div
+                      key={clase.id}
+                      title={`${PROGRAMAS[clase.programa] || clase.programa} — ${formatHora(clase.hora)} — ${clase.educadora || 'Sin asignar'} — Cupo ${clase.ocupacion}`}
+                      style={{
+                        backgroundColor: colorDe(clase.educadora || 'Sin asignar'),
+                        color: 'white',
+                        borderRadius: '6px',
+                        padding: '0.35rem 0.6rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        lineHeight: 1.35,
+                        maxWidth: '240px',
+                        outline: clase.cupoLleno ? '2px solid var(--color-danger)' : 'none',
+                        outlineOffset: '1px',
+                      }}
+                    >
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {formatHora(clase.hora)} · {PROGRAMAS[clase.programa] || clase.programa}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', opacity: 0.92, display: 'flex', gap: '0.5rem' }}>
+                        <span>{(clase.educadora || 'Sin asignar').split(' ')[0]}</span>
+                        <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+                          {clase.cupoLleno ? `⛔ ${clase.ocupacion} · LLENA` : `👥 ${clase.ocupacion}`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             );

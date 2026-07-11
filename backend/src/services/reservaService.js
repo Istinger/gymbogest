@@ -19,6 +19,8 @@ class SinSaldoError extends Error {}
 class ReservaDuplicadaError extends Error {}
 // Regla de negocio: un niño no puede tener dos clases a la misma hora
 class ChoqueHorarioError extends Error {}
+// Extensión CU-01: un niño dado de baja (inactivo) no puede reservar
+class NinoInactivoError extends Error {}
 
 function crearReservaService(prisma) {
   async function reservarClase({ ninoId, claseId, paqueteId, usuarioId }) {
@@ -32,6 +34,14 @@ function crearReservaService(prisma) {
       const [clase] = await tx.$queryRaw`
         SELECT id, "cupoMaximo", "fechaHora" FROM "Clase" WHERE id = ${claseId} FOR UPDATE`;
       if (!clase) throw new Error('La clase no existe');
+
+      // Extensión CU-01: niño inactivo (baja suave) no puede reservar
+      const nino = await tx.nino.findUnique({ where: { id: ninoId } });
+      if (!nino) throw new Error('El niño no existe');
+      if (nino.activo === false) {
+        throw new NinoInactivoError(
+          'El niño está inactivo. Reactívalo desde Inscripciones antes de reservar.');
+      }
 
       // Regla @@unique([ninoId, claseId]): detectar el duplicado ANTES de
       // crear, para responder un mensaje claro en vez del error crudo de BD
@@ -170,4 +180,5 @@ function crearReservaService(prisma) {
 
 module.exports = {
   crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
+  NinoInactivoError,
 };

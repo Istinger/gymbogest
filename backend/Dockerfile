@@ -7,4 +7,7 @@ RUN npm install
 COPY . .
 RUN npx prisma generate
 EXPOSE 3001
-CMD ["npm", "run", "dev"]
+# El entrypoint regenera el cliente Prisma y aplica migraciones al arrancar:
+# el volumen anónimo /app/node_modules sobrevive a los rebuilds y taparía
+# el cliente generado arriba (ver CLAUDE.md, gotchas Prisma+Docker).
+CMD ["sh", "docker-entrypoint.dev.sh"]

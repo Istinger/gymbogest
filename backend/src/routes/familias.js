@@ -72,6 +72,37 @@ router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'EDUCA
     catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+// PUT /api/familias/tutor/:tutorId — corregir typos de la inscripción (extensión CU-01).
+// Recepción edita contacto; la CÉDULA solo la corrige la Propietaria (clave de identidad, T05).
+router.put('/tutor/:tutorId', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
+  async (req, res) => {
+    try {
+      const tutor = await servicio.actualizarTutor(req.params.tutorId, req.body, {
+        usuarioId: req.usuario.id,
+        permitirCedula: req.usuario.rol === 'PROPIETARIA',
+      });
+      res.json(tutor);
+    } catch (e) {
+      if (e instanceof ValidacionError) {
+        const esPermiso = e.message.includes('Solo la Propietaria');
+        return res.status(esPermiso ? 403 : 400).json({ error: e.message });
+      }
+      if (e.code === 'P2002') return res.status(409).json({ error: 'Registro duplicado', campos: e.meta?.target });
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+// PUT /api/familias/nino/:ninoId — corregir typos del niño (extensión CU-01)
+router.put('/nino/:ninoId', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
+  async (req, res) => {
+    try {
+      res.json(await servicio.actualizarNino(req.params.ninoId, req.body, { usuarioId: req.usuario.id }));
+    } catch (e) {
+      if (e instanceof ValidacionError) return res.status(400).json({ error: e.message });
+      res.status(500).json({ error: e.message });
+    }
+  });
+
 // GET /api/familias/:id — T06 (ficha completa)
 router.get('/:id', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'),
   async (req, res) => {

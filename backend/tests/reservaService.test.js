@@ -10,13 +10,18 @@
 // ============================================================
 const {
   crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
+  NinoInactivoError,
 } = require('../src/services/reservaService');
 
 function crearPrismaFalso({
   ocupados, saldoClases, reservaAnterior, reservaExistente = null, reservaEnChoque = null,
+  ninoActivo = true,
 }) {
   const tx = {
     $executeRawUnsafe: jest.fn(),
+    nino: {
+      findUnique: jest.fn().mockResolvedValue({ id: 1, activo: ninoActivo }),
+    },
     $queryRaw: jest.fn().mockResolvedValue([
       { id: 10, cupoMaximo: 9, fechaHora: new Date('2026-07-10T10:00:00Z') },
     ]),
@@ -141,5 +146,20 @@ describe('T09 / CU-02: reagendar reserva', () => {
     });
     const servicio = crearReservaService(prisma);
     await expect(servicio.reagendarReserva(1, 20, 7)).rejects.toThrow();
+  });
+});
+describe('Extensión CU-01: niño inactivo (baja suave) no puede reservar', () => {
+  test('rechaza la reserva si el niño está inactivo', async () => {
+    const { prisma } = crearPrismaFalso({ ocupados: 0, saldoClases: 5, ninoActivo: false });
+    const servicio = crearReservaService(prisma);
+    await expect(servicio.reservarClase({ ninoId: 1, claseId: 10, paqueteId: 5 }))
+      .rejects.toThrow(NinoInactivoError);
+  });
+
+  test('con el niño activo la reserva procede con normalidad', async () => {
+    const { prisma } = crearPrismaFalso({ ocupados: 0, saldoClases: 5, ninoActivo: true });
+    const servicio = crearReservaService(prisma);
+    const r = await servicio.reservarClase({ ninoId: 1, claseId: 10, paqueteId: 5 });
+    expect(r.estado).toBe('ACTIVA');
   });
 });

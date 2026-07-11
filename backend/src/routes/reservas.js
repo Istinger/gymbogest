@@ -4,6 +4,7 @@ const prisma = require('../prisma'); // singleton inyectado (SOLID-D)
 const { verificarToken } = require('../middleware/auth');
 const {
   crearReservaService, CupoLlenoError, SinSaldoError, ReservaDuplicadaError, ChoqueHorarioError,
+  NinoInactivoError,
 } = require('../services/reservaService');
 
 const servicio = crearReservaService(prisma);
@@ -69,6 +70,7 @@ router.post('/', verificarToken, async (req, res) => {
   } catch (e) {
     if (e instanceof CupoLlenoError) return res.status(409).json({ error: e.message, sugerencia: 'horarios_alternativos' });
     if (e instanceof SinSaldoError) return res.status(409).json({ error: e.message, sugerencia: 'clases_adicionales' });
+    if (e instanceof NinoInactivoError) return res.status(409).json({ error: e.message });
     // Carrera contra el @@unique([ninoId, claseId]): mismo mensaje amable
     if (e instanceof ReservaDuplicadaError || e.code === 'P2002')
       return res.status(409).json({ error: 'Este niño ya tiene una reserva en esta clase. Elige otro horario.', sugerencia: 'horarios_alternativos' });

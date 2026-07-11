@@ -71,12 +71,33 @@ async function main() {
   }
   console.log(`✔ ${clases.length} clases creadas.`);
 
+  // ---------- Clases extra HOY en distintas horas (prueba visual de la agenda) ----------
+  // Incluye dos pares a la MISMA hora (10:00 y 15:00) para verificar que la vista
+  // de calendario diario apila clases concurrentes lado a lado sin solaparse.
+  const horarioHoy = [
+    { h: 9,  m: 0,  programa: 'MUSIC',         empleadoId: empleado2.id },
+    { h: 10, m: 0,  programa: 'ART',           empleadoId: empleado2.id }, // misma hora que clases[0]
+    { h: 11, m: 30, programa: 'SCHOOL_SKILLS', empleadoId: empleado1.id },
+    { h: 15, m: 0,  programa: 'PLAYLAB',       empleadoId: empleado1.id },
+    { h: 15, m: 0,  programa: 'PLAY_LEARN',    empleadoId: empleado2.id }, // concurrente con la anterior
+    { h: 16, m: 30, programa: 'MUSIC',         empleadoId: empleado1.id },
+    { h: 17, m: 0,  programa: 'ART',           empleadoId: empleado2.id },
+  ];
+  for (const { h, m, programa, empleadoId } of horarioHoy) {
+    const fecha = new Date();
+    fecha.setHours(h, m, 0, 0);
+    await prisma.clase.create({
+      data: { programa, fechaHora: fecha, cupoMaximo: 9, empleadoId },
+    });
+  }
+  console.log(`✔ ${horarioHoy.length} clases extra creadas para HOY (agenda del día).`);
+
   // ---------- Familia + Niño + Paquete de ejemplo, para probar reservas ----------
   const familiaDemo = await prisma.familia.create({
     data: { canalOrigen: 'REFERIDO' },
   });
   const personaTutorDemo = await prisma.persona.create({
-    data: { nombres: 'Tutor Demo', cedula: '1700009999', correo: 'tutor.demo@mail.com', telefono: '0990009999' },
+    data: { nombres: 'Tutor Demo', cedula: '1700009994', correo: 'tutor.demo@gmail.com', telefono: '0990009999' },
   });
   await prisma.tutor.create({
     data: { personaId: personaTutorDemo.id, parentesco: 'madre', familiaId: familiaDemo.id },
@@ -102,6 +123,28 @@ async function main() {
   }
   console.log(`✔ Clase "${claseLlena.programa}" (id ${claseLlena.id}) llenada con 9 reservas`
     + ` — úsala para demostrar el rechazo del cupo n.º 10.`);
+
+  // ---------- Familias con tutor identificable (probar buscador de Recepción) ----------
+  // Permiten probar el filtro por tutor, niño y cédula en el panel de Recepción.
+  const familiasBuscables = [
+    { tutor: { nombres: 'Carla Játiva', cedula: '1710000009', correo: 'carla.jativa@gmail.com', telefono: '0991000001', parentesco: 'madre' }, nino: { nombres: 'Emilia Játiva', nacimiento: '2022-03-15' }, canal: 'REDES' },
+    { tutor: { nombres: 'Diego Salazar', cedula: '1710000017', correo: 'diego.salazar@hotmail.com', telefono: '0991000002', parentesco: 'padre' }, nino: { nombres: 'Martín Salazar', nacimiento: '2021-11-02' }, canal: 'PEDIATRA_ALIADO' },
+    { tutor: { nombres: 'Verónica Paz', cedula: '1710000025', correo: 'vero.paz@outlook.com', telefono: '0991000003', parentesco: 'madre' }, nino: { nombres: 'Amelia Paz', nacimiento: '2023-01-20' }, canal: 'REFERIDO' },
+    { tutor: { nombres: 'Andrés Molina', cedula: '1710000033', correo: 'andres.molina@gmail.com', telefono: '0991000004', parentesco: 'padre' }, nino: { nombres: 'Julián Molina', nacimiento: '2022-07-08' }, canal: 'EMPRESA' },
+  ];
+  for (const { tutor, nino, canal } of familiasBuscables) {
+    const fam = await prisma.familia.create({ data: { canalOrigen: canal } });
+    const personaTutor = await prisma.persona.create({
+      data: { nombres: tutor.nombres, cedula: tutor.cedula, correo: tutor.correo, telefono: tutor.telefono },
+    });
+    await prisma.tutor.create({
+      data: { personaId: personaTutor.id, parentesco: tutor.parentesco, familiaId: fam.id },
+    });
+    await prisma.nino.create({
+      data: { nombres: nino.nombres, fechaNacimiento: new Date(nino.nacimiento), familiaId: fam.id },
+    });
+  }
+  console.log(`✔ ${familiasBuscables.length} familias con tutor creadas (probar buscador de Recepción).`);
 
   // Un niño de la familia demo, SIN reservar aún (para probar el flujo normal de reserva)
   const ninoDemo = await prisma.nino.create({

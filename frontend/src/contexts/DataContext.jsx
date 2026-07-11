@@ -58,10 +58,41 @@ export function DataProvider({ children }) {
 
   const createFamilia = useCallback(async (familiaData) => {
     const response = await handleRequest('createFamilia', async () => {
+      // La respuesta del POST NO es una familia completa ({asociado, familiaId,
+      // codigo, nino}): no se inyecta al estado — el caller refresca con getFamilias().
       const { data } = await axiosInstance.post('/familias', familiaData);
-      setFamilias((prev) => [...prev, data]);
       return data;
-    }, 'Familia registrada correctamente', true);
+    }, null, true);
+    if (response) {
+      // CU-01 exc. 6: si la cédula ya existía, el niño se asoció a la familia
+      // EXISTENTE (no hay familia nueva) — avisar con el mensaje real del backend.
+      toast.success(response.asociado
+        ? response.mensaje
+        : 'Familia registrada correctamente');
+    }
+    return response;
+  }, [axiosInstance, handleRequest]);
+
+  // Extensión CU-01: corregir typos de la inscripción (tutor / niño)
+  const updateTutor = useCallback(async (tutorId, datos) => {
+    return handleRequest('updateTutor', async () => {
+      const { data } = await axiosInstance.put(`/familias/tutor/${tutorId}`, datos);
+      return data;
+    }, 'Datos del tutor actualizados', true);
+  }, [axiosInstance, handleRequest]);
+
+  const updateNino = useCallback(async (ninoId, datos) => {
+    const response = await handleRequest('updateNino', async () => {
+      const { data } = await axiosInstance.put(`/familias/nino/${ninoId}`, datos);
+      return data;
+    }, null, true);
+    if (response) {
+      // La baja cancela las reservas de clases futuras (devuelve el saldo);
+      // las clases pasadas se conservan como historial
+      toast.success(response.reservasCanceladas > 0
+        ? `Niño dado de baja: se cancelaron ${response.reservasCanceladas} reserva(s) de clases futuras y se devolvió el saldo`
+        : 'Datos del niño actualizados');
+    }
     return response;
   }, [axiosInstance, handleRequest]);
 
@@ -259,6 +290,8 @@ export function DataProvider({ children }) {
     loading,
     getFamilias,
     createFamilia,
+    updateTutor,
+    updateNino,
     getAgenda,
     createReserva,
     updateReserva,
