@@ -31,6 +31,7 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T15 · GET /api/indicadores (activos, inscritos, por canal, conversión, asistencia por clase). (RF-07) — indicadorService.js
 - [x] T16 · CRUD /api/corporativos (solicitudes On The Go). (RF-08) — corporativoService.js
 - [x] T17 · Pagos: POST /api/pagos con mock Dátil → numeroComprobante. — pagoService.js (integración real en backlog.md)
+- [x] T28 · On The Go ampliado: tipo EMPRESA|PARTICULAR (clases privadas de familias), PUT /api/corporativos/:id para editar en cualquier estado, filtros de búsqueda (texto/tipo/estado) y errores 500 sin detalle técnico al usuario. (RF-08) — pendiente reflejar TipoEvento en el diagrama de clases del Avance 6 (regla de oro)
 
 ## Fase 5 — Frontend React
 - [x] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.

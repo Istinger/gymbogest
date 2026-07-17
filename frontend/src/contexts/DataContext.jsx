@@ -238,6 +238,29 @@ export function DataProvider({ children }) {
     }, null, false);
   }, [axiosInstance, handleRequest]);
 
+  // Inventario de material didáctico (RF-06)
+  const getMateriales = useCallback(async () => {
+    return handleRequest('getMateriales', async () => {
+      const { data } = await axiosInstance.get('/materiales');
+      return data;
+    }, null, false);
+  }, [axiosInstance, handleRequest]);
+
+  const createMaterial = useCallback(async (materialData) => {
+    return handleRequest('createMaterial', async () => {
+      const { data } = await axiosInstance.post('/materiales', materialData);
+      return data;
+    }, 'Material registrado correctamente', true);
+  }, [axiosInstance, handleRequest]);
+
+  // delta > 0 entrada, delta < 0 salida
+  const registrarMovimiento = useCallback(async (materialId, delta) => {
+    return handleRequest(`movimiento_${materialId}`, async () => {
+      const { data } = await axiosInstance.post(`/materiales/${materialId}/movimiento`, { delta });
+      return data;
+    }, 'Movimiento registrado', true);
+  }, [axiosInstance, handleRequest]);
+
   // Seguimiento de faltas para el Excel (Propietaria)
   const getFaltas = useCallback(async (filtros = {}) => {
     return handleRequest('getFaltas', async () => {
@@ -268,6 +291,14 @@ export function DataProvider({ children }) {
       const { data } = await axiosInstance.put(`/corporativos/${id}/${action}`, payload);
       return data;
     }, 'Solicitud corporativa actualizada', true);
+  }, [axiosInstance, handleRequest]);
+
+  // Edición de datos de la solicitud On The Go (empresa/solicitante, tipo, fecha...)
+  const editCorporativo = useCallback(async (id, datos) => {
+    return handleRequest(`editCorporativo_${id}`, async () => {
+      const { data } = await axiosInstance.put(`/corporativos/${id}`, datos);
+      return data;
+    }, 'Solicitud On The Go actualizada', true);
   }, [axiosInstance, handleRequest]);
 
   // Sign up público (sin token): crea cuenta con rol TUTOR por defecto
@@ -383,9 +414,13 @@ export function DataProvider({ children }) {
     createProgreso,
     getIndicadores,
     getFaltas,
+    getMateriales,
+    createMaterial,
+    registrarMovimiento,
     getCorporativos,
     createCorporativo,
     updateCorporativo,
+    editCorporativo,
     signUp,
     getUsuarios,
     createUsuario,

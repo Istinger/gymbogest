@@ -1,13 +1,22 @@
-# Especificación — GymboGest (v1.0)
+# Especificación — GymboGest (v1.1)
 
 Sistema web de gestión para Gymboree Play & Music Los Chillos.
 Fuente: Avance 4 (requerimientos) y Avance 5 (casos de uso) del proyecto de Análisis y Diseño de Sistemas, UPS.
 
-## Usuarios y roles
-- **PROPIETARIA**: indicadores, reportes, servicios corporativos, gestión de usuarios.
-- **RECEPCION**: inscripciones, agenda, reservas, pagos, inventario.
-- **EDUCADORA**: lista de clase, asistencia, progreso.
-- **TUTOR** (padre): reserva/reagenda en línea, ve el progreso de su hijo.
+## Usuarios y roles (RNF-01)
+- **ADMIN**: administración de cuentas (crear/editar correos, nombres, contraseñas y roles
+  operativos) y bitácora de ingresos al sistema. Los roles ADMIN y PROPIETARIA están
+  PROTEGIDOS: no pueden asignarse ni cambiarse desde la gestión de cuentas (403).
+- **PROPIETARIA**: indicadores y reportes (incl. exportación a Excel), programación de
+  clases con calendario de educadoras, seguimiento de faltas, servicios corporativos.
+- **RECEPCION**: inscripciones, agenda del día, asignación de clases a niños, inventario.
+- **EDUCADORA**: SOLO sus clases asignadas (autorización a nivel de dato), asistencia,
+  progreso. Puede consultar el panel de Recepción.
+- **TUTOR** (padre): reserva/reagenda/cancela en línea, ve el progreso de sus hijos (LOPDP).
+  El sign up público crea cuentas con rol TUTOR por defecto; si el correo coincide con una
+  Persona ya inscrita, la cuenta queda vinculada a su familia.
+- Todo intento de login (exitoso o fallido) queda registrado en la bitácora de accesos
+  (LogAcceso: fecha, correo, resultado, IP), visible solo para ADMIN.
 
 ## Historias funcionales (con criterio de aceptación verificable)
 
@@ -64,10 +73,14 @@ Como PROPIETARIA quiero que los paquetes tengan una duración; como TUTOR no deb
 - [ ] El portal del Tutor muestra la fecha de vencimiento de cada paquete y deshabilita los vencidos en el selector.
 
 ### HF-2 · Programar clases (RF-02)
-Como RECEPCION quiero crear clases por programa y horario con cupo máximo 9.
+Como RECEPCION o PROPIETARIA quiero crear clases por programa, día y hora, asignando la
+educadora que la imparte, con cupo máximo 9.
 **Aceptación:**
 - [ ] Programa ∈ {PLAY_LEARN, MUSIC, ART, SCHOOL_SKILLS, PLAYLAB}.
 - [ ] cupoMaximo por defecto = 9, no editable por encima de 9.
+- [ ] La PROPIETARIA reprograma día/hora y reasigna la educadora de una clase existente.
+- [ ] Calendario mensual por educadora (color por educadora) y exportación a Excel de las
+      clases programadas, con filtros por programa, fecha, educadora y cupo.
 
 ### HF-3 · Reservar clase (RF-02, RF-03, CU-02) ⭐ CRÍTICA
 Como TUTOR quiero reservar una clase para mi hijo según mi paquete.
@@ -77,6 +90,11 @@ Como TUTOR quiero reservar una clase para mi hijo según mi paquete.
 - [ ] Descuenta 1 del saldoClases del paquete; si saldo = 0 → rechaza y sugiere renovar.
 - [ ] Reagendar libera el cupo anterior y toma el nuevo, sin doble descuento.
 - [ ] Cancelar devuelve el saldo al paquete y libera el cupo.
+- [ ] Un niño no puede reservar dos veces la misma clase (@@unique ninoId+claseId) → 409 con
+      mensaje claro, nunca el error crudo de BD.
+- [ ] CHOQUE DE HORARIOS: un niño no puede tener dos clases ACTIVAS a la misma hora → 409;
+      aplica también al reagendar (sin contar la reserva que se está moviendo).
+- [ ] Las confirmaciones y rechazos se muestran como notificaciones en pantalla (RF-03).
 
 ### HF-4 · Registrar asistencia (RF-04)
 Como EDUCADORA quiero marcar asistencia por clase.
@@ -97,11 +115,23 @@ Como PROPIETARIA quiero el tablero con datos reales.
 - [ ] Inscripciones por canal de origen (mide la estrategia MAX-MAX).
 - [ ] Conversión: niños con CLASE_PRUEBA que no se inscribieron.
 - [ ] Asistencia por clase. Filtro por rango de fechas.
+- [ ] Seguimiento de faltas (día/semana/mes): niños que FALTARON con el contacto del tutor
+      a cargo (teléfono, correo), exportable a Excel para dar seguimiento por canal externo.
 
-### HF-8 · Servicios corporativos (RF-08)
-Como PROPIETARIA quiero registrar solicitudes On The Go de empresas.
-**Aceptación:** solicitud con empresa, fecha, n.º de niños; asignación de educadora; estado del evento.
+### HF-8 · Servicios On The Go: corporativos y particulares (RF-08)
+Como PROPIETARIA quiero registrar y editar solicitudes On The Go de empresas
+y de particulares (familias que contratan una clase privada).
+**Aceptación:** solicitud con tipo (EMPRESA | PARTICULAR), empresa/solicitante, contacto,
+fecha y n.º de niños; asignación de educadora (pasa a CONFIRMADO); ciclo de estados
+SOLICITADO → CONFIRMADO → EJECUTADO/CANCELADO; edición de los datos en cualquier
+estado (la Propietaria puede corregir incluso eventos ejecutados/cancelados);
+búsqueda por texto y filtros por tipo y estado en el listado.
+**Excepciones:** tipo fuera del catálogo → 400; evento inexistente → 404; los errores
+inesperados nunca muestran el detalle técnico al usuario final.
 
 ## Fuera de alcance (backlog)
 Notificaciones WhatsApp/correo automáticas, pagos en línea, integración real con Dátil
-(se simula con un mock que genera un número de comprobante).
+(se simula con un mock que genera un número de comprobante), asignación de MATERIALES a
+eventos corporativos (RF-08: hoy solo se asigna fecha y educadora), indicador de
+antigüedad de inscripción por niño, despliegue en cloud (RNF-04: corre contenerizado
+en Docker, listo para desplegar).

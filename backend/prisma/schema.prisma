@@ -282,9 +282,16 @@ enum EstadoEvento {
   CANCELADO
 }
 
+// RF-08: On The Go atiende empresas y particulares (clase privada de una familia)
+enum TipoEvento {
+  EMPRESA
+  PARTICULAR
+}
+
 model EventoCorporativo {
   id         Int          @id @default(autoincrement())
-  empresa    String
+  tipo       TipoEvento   @default(EMPRESA)
+  empresa    String // nombre de la empresa o del solicitante particular
   contacto   String
   fecha      DateTime
   numNinos   Int

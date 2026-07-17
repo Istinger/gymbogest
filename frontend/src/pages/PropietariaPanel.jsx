@@ -3,6 +3,7 @@
 // por canal (métrica de la estrategia MAX-MAX) y gestión de corporativos
 // "On The Go". La administración de cuentas vive en el panel ADMIN aparte.
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'react-toastify';
 import { Layout } from '../components/Layout';
 import { useData } from '../contexts/DataContext';
 
@@ -869,11 +870,24 @@ function EditarClaseModal({ clase, educadoras, onClose, onGuardado }) {
 }
 
 // ---------- RF-08: corporativos "On The Go" ----------
+const TIPOS_EVENTO = {
+  EMPRESA: '🏢 Empresa',
+  PARTICULAR: '👨‍👩‍👧 Particular',
+};
+
+const CORPORATIVO_VACIO = { tipo: 'EMPRESA', empresa: '', contacto: '', fecha: '', numNinos: '' };
+
 function Corporativos() {
-  const { getCorporativos, createCorporativo, updateCorporativo, clases, getClases, loading } = useData();
+  const { getCorporativos, createCorporativo, editCorporativo, updateCorporativo, clases, getClases, loading } = useData();
   const [eventos, setEventos] = useState([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ empresa: '', contacto: '', fecha: '', numNinos: '' });
+  const [formData, setFormData] = useState(CORPORATIVO_VACIO);
+  const [editandoId, setEditandoId] = useState(null); // null = creando
+  const [original, setOriginal] = useState(null); // snapshot para detectar "sin cambios"
+  // Filtros de búsqueda (en memoria, sobre la lista ya cargada)
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('TODOS');
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
 
   const cargar = useCallback(async () => {
     const data = await getCorporativos();
@@ -893,22 +907,63 @@ function Corporativos() {
     }
   }
 
+  const empezarEdicion = (ev) => {
+    const snapshot = {
+      tipo: ev.tipo || 'EMPRESA',
+      empresa: ev.empresa,
+      contacto: ev.contacto,
+      fecha: ev.fecha.slice(0, 10), // ISO → yyyy-mm-dd para <input type="date">
+      numNinos: String(ev.numNinos),
+    };
+    setEditandoId(ev.id);
+    setFormData(snapshot);
+    setOriginal(snapshot);
+    setShowForm(true);
+  };
+
+  const cerrarForm = () => {
+    setShowForm(false);
+    setEditandoId(null);
+    setOriginal(null);
+    setFormData(CORPORATIVO_VACIO);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // Editar sin tocar nada no llama a la API: aviso amable y se cierra el formulario
+    if (editandoId && original && JSON.stringify(formData) === JSON.stringify(original)) {
+      toast.info('No hiciste ningún cambio, no hay nada que guardar');
+      cerrarForm();
+      return;
+    }
+    const datos = {
+      tipo: formData.tipo,
+      empresa: formData.empresa,
+      contacto: formData.contacto,
+      fecha: formData.fecha,
+      numNinos: Number(formData.numNinos),
+    };
     try {
-      await createCorporativo({
-        empresa: formData.empresa,
-        contacto: formData.contacto,
-        fecha: formData.fecha,
-        numNinos: Number(formData.numNinos),
-      });
-      setFormData({ empresa: '', contacto: '', fecha: '', numNinos: '' });
-      setShowForm(false);
+      if (editandoId) await editCorporativo(editandoId, datos);
+      else await createCorporativo(datos);
+      cerrarForm();
       await cargar();
     } catch (error) {
       // Error ya notificado por toast en DataContext
     }
   };
+
+  // Aplica los filtros de búsqueda en memoria
+  const eventosFiltrados = eventos.filter((ev) => {
+    if (filtroTipo !== 'TODOS' && (ev.tipo || 'EMPRESA') !== filtroTipo) return false;
+    if (filtroEstado !== 'TODOS' && ev.estado !== filtroEstado) return false;
+    if (busqueda.trim()) {
+      const q = busqueda.trim().toLowerCase();
+      const texto = `${ev.empresa} ${ev.contacto} ${ev.educadora?.persona?.nombres || ''}`.toLowerCase();
+      if (!texto.includes(q)) return false;
+    }
+    return true;
+  });
 
   const handleAsignar = async (id, educadoraId) => {
     if (!educadoraId) return;
@@ -930,16 +985,24 @@ function Corporativos() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h3>Servicios corporativos "On The Go"</h3>
-        <button className="btn" onClick={() => setShowForm(!showForm)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
+        <h3>Servicios "On The Go" — empresas y particulares</h3>
+        <button className="btn" onClick={() => (showForm ? cerrarForm() : setShowForm(true))} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
           {showForm ? 'Cancelar' : '+ Nueva solicitud'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+        <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-accent-soft)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
           <div className="form-group">
-            <label>Empresa *</label>
+            <label>Tipo *</label>
+            <select value={formData.tipo} onChange={(e) => setFormData((p) => ({ ...p, tipo: e.target.value }))} style={inputStyle}>
+              {Object.entries(TIPOS_EVENTO).map(([valor, label]) => (
+                <option key={valor} value={valor}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>{formData.tipo === 'PARTICULAR' ? 'Solicitante *' : 'Empresa *'}</label>
             <input type="text" value={formData.empresa} onChange={(e) => setFormData((p) => ({ ...p, empresa: e.target.value }))} style={inputStyle} required />
           </div>
           <div className="form-group">
@@ -955,28 +1018,64 @@ function Corporativos() {
             <input type="number" min="1" value={formData.numNinos} onChange={(e) => setFormData((p) => ({ ...p, numNinos: e.target.value }))} style={inputStyle} required />
           </div>
           <button type="submit" className="btn" style={{ padding: '0.7rem 1rem', margin: 0 }} disabled={loading}>
-            Registrar
+            {editandoId ? 'Guardar cambios' : 'Registrar'}
           </button>
         </form>
       )}
 
+      {/* Filtros de búsqueda */}
+      {eventos.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
+          <input
+            type="search"
+            placeholder="🔍 Buscar por empresa, solicitante, contacto o educadora..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            style={{ ...inputStyle, flex: '1 1 260px', width: 'auto' }}
+            aria-label="Buscar solicitudes"
+          />
+          <select value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)} style={{ ...inputStyle, width: 'auto' }} aria-label="Filtrar por tipo">
+            <option value="TODOS">Tipo: todos</option>
+            {Object.entries(TIPOS_EVENTO).map(([valor, label]) => (
+              <option key={valor} value={valor}>{label}</option>
+            ))}
+          </select>
+          <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)} style={{ ...inputStyle, width: 'auto' }} aria-label="Filtrar por estado">
+            <option value="TODOS">Estado: todos</option>
+            {Object.keys(ESTADOS_EVENTO).map((est) => (
+              <option key={est} value={est}>{est}</option>
+            ))}
+          </select>
+          {(busqueda || filtroTipo !== 'TODOS' || filtroEstado !== 'TODOS') && (
+            <span style={{ color: 'var(--color-muted)', fontSize: '0.9rem' }}>
+              {eventosFiltrados.length} de {eventos.length}
+            </span>
+          )}
+        </div>
+      )}
+
       {eventos.length === 0 ? (
-        <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>No hay solicitudes corporativas registradas</p>
+        <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>No hay solicitudes On The Go registradas</p>
+      ) : eventosFiltrados.length === 0 ? (
+        <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>Ninguna solicitud coincide con la búsqueda</p>
       ) : (
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
-              <th style={{ padding: '0.6rem' }}>Empresa</th>
+              <th style={{ padding: '0.6rem' }}>Tipo</th>
+              <th style={{ padding: '0.6rem' }}>Empresa / Solicitante</th>
               <th style={{ padding: '0.6rem' }}>Contacto</th>
               <th style={{ padding: '0.6rem' }}>Fecha</th>
               <th style={{ padding: '0.6rem' }}>Niños</th>
               <th style={{ padding: '0.6rem' }}>Educadora</th>
               <th style={{ padding: '0.6rem' }}>Estado</th>
+              <th style={{ padding: '0.6rem' }}></th>
             </tr>
           </thead>
           <tbody>
-            {eventos.map((ev) => (
+            {eventosFiltrados.map((ev) => (
               <tr key={ev.id} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                <td style={{ padding: '0.6rem' }}>{TIPOS_EVENTO[ev.tipo] || TIPOS_EVENTO.EMPRESA}</td>
                 <td style={{ padding: '0.6rem', fontWeight: 600 }}>{ev.empresa}</td>
                 <td style={{ padding: '0.6rem' }}>{ev.contacto}</td>
                 <td style={{ padding: '0.6rem' }}>{new Date(ev.fecha).toLocaleDateString('es-EC')}</td>
@@ -1009,6 +1108,15 @@ function Corporativos() {
                       <option key={est} value={est}>{est}</option>
                     ))}
                   </select>
+                </td>
+                <td style={{ padding: '0.6rem' }}>
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => empezarEdicion(ev)}
+                    style={{ width: 'auto', minHeight: '36px', padding: '0.3rem 0.8rem', fontSize: '0.9rem' }}
+                  >
+                    ✏️ Editar
+                  </button>
                 </td>
               </tr>
             ))}

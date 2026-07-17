@@ -3,8 +3,11 @@
 // BD falsa inyectada (SOLID-D). Ejecutar: npm test
 // ============================================================
 const { crearIndicadorService } = require('../src/services/indicadorService');
-const { crearCorporativoService, CorporativoInvalidoError } =
-  require('../src/services/corporativoService');
+const {
+  crearCorporativoService,
+  CorporativoInvalidoError,
+  CorporativoNoEncontradoError,
+} = require('../src/services/corporativoService');
 const { crearPagoService, PagoInvalidoError } = require('../src/services/pagoService');
 
 // ---------- T15: Indicadores (RF-07) ----------
@@ -93,6 +96,64 @@ describe('RF-08: servicios corporativos On The Go', () => {
   test('rechaza un estado fuera del catálogo', async () => {
     const s = crearCorporativoService(prismaFalso());
     await expect(s.cambiarEstado(1, 'PENDIENTE')).rejects.toThrow(CorporativoInvalidoError);
+  });
+
+  // --- T28: tipo EMPRESA | PARTICULAR + edición de solicitudes ---
+
+  test('rechaza un tipo fuera del catálogo', async () => {
+    const s = crearCorporativoService(prismaFalso());
+    await expect(s.registrarSolicitud({
+      empresa: 'Familia Paredes', contacto: '099', fecha: '2026-09-01', numNinos: 3, tipo: 'GUBERNAMENTAL',
+    })).rejects.toThrow(CorporativoInvalidoError);
+  });
+
+  test('sin tipo explícito la solicitud queda como EMPRESA (retrocompatible)', async () => {
+    const s = crearCorporativoService(prismaFalso());
+    const r = await s.registrarSolicitud({
+      empresa: 'Constructora XYZ', contacto: 'ana@xyz.com', fecha: '2026-09-01', numNinos: 15,
+    });
+    expect(r.tipo).toBe('EMPRESA');
+  });
+
+  test('registra una solicitud PARTICULAR (clase privada de una familia)', async () => {
+    const s = crearCorporativoService(prismaFalso());
+    const r = await s.registrarSolicitud({
+      empresa: 'Familia Paredes', contacto: '0991234567', fecha: '2026-09-01', numNinos: 3, tipo: 'PARTICULAR',
+    });
+    expect(r.tipo).toBe('PARTICULAR');
+    expect(r.estado).toBe('SOLICITADO');
+  });
+
+  test('edita los datos de una solicitud', async () => {
+    const prisma = prismaFalso();
+    prisma.eventoCorporativo.findUnique = jest.fn().mockResolvedValue({ id: 1, estado: 'SOLICITADO' });
+    const s = crearCorporativoService(prisma);
+    const r = await s.editarSolicitud(1, {
+      empresa: 'Banco ABC', contacto: 'rh@abc.com', fecha: '2026-10-05', numNinos: 20, tipo: 'EMPRESA',
+    });
+    expect(r.empresa).toBe('Banco ABC');
+    expect(r.numNinos).toBe(20);
+  });
+
+  test('permite editar también un evento EJECUTADO o CANCELADO (corrección de datos)', async () => {
+    for (const estado of ['EJECUTADO', 'CANCELADO']) {
+      const prisma = prismaFalso();
+      prisma.eventoCorporativo.findUnique = jest.fn().mockResolvedValue({ id: 1, estado });
+      const s = crearCorporativoService(prisma);
+      const r = await s.editarSolicitud(1, {
+        empresa: 'Banco ABC', contacto: 'rh@abc.com', fecha: '2026-10-05', numNinos: 20,
+      });
+      expect(r.empresa).toBe('Banco ABC');
+    }
+  });
+
+  test('rechaza editar un evento inexistente', async () => {
+    const prisma = prismaFalso();
+    prisma.eventoCorporativo.findUnique = jest.fn().mockResolvedValue(null);
+    const s = crearCorporativoService(prisma);
+    await expect(s.editarSolicitud(99, {
+      empresa: 'Banco ABC', contacto: 'rh@abc.com', fecha: '2026-10-05', numNinos: 20,
+    })).rejects.toThrow(CorporativoNoEncontradoError);
   });
 });
 

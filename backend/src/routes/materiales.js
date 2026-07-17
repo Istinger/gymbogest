@@ -30,13 +30,13 @@ router.post('/:id/movimiento', verificarToken,
   });
 
 // GET /api/materiales — listado con bandera enAlerta
-router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'), async (_req, res) => {
+router.get('/', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'EDUCADORA'), async (_req, res) => {
   try { res.json(await servicio.listarMateriales()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // GET /api/materiales/alertas — HF-6: bajo stock mínimo
-router.get('/alertas', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA'), async (_req, res) => {
+router.get('/alertas', verificarToken, permitirRoles('RECEPCION', 'PROPIETARIA', 'EDUCADORA'), async (_req, res) => {
   try { res.json(await servicio.alertas()); }
   catch (e) { res.status(500).json({ error: e.message }); }
 });

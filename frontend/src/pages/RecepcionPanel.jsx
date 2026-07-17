@@ -2,6 +2,7 @@ import { Layout } from '../components/Layout';
 import { Inscripciones } from '../components/Inscripciones';
 import { AsignarClase } from '../components/AsignarClase';
 import { AgendaDelDia } from '../components/AgendaDelDia';
+import { Inventario } from '../components/Inventario';
 
 export function RecepcionPanel() {
   return (
@@ -22,6 +23,8 @@ export function RecepcionPanel() {
           <AsignarClase />
           <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid #eee' }} />
           <AgendaDelDia />
+          <hr style={{ margin: '2rem 0', border: 'none', borderTop: '1px solid #eee' }} />
+          <Inventario />
         </div>
       </div>
     </Layout>
