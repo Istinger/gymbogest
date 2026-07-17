@@ -51,7 +51,7 @@ export function PropietariaPanel() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1.5rem' }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -352,7 +352,7 @@ function CalendarioMensual({ clases }) {
 
   return (
     <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '14px', border: '1px solid var(--color-border, #e5e5e5)', backgroundColor: 'var(--color-surface, #fff)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0 }}>🗓️ Calendario de educadoras</h3>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <button onClick={() => cambiarMes(-1)} style={{ padding: '0.4rem 0.8rem', border: '1px solid #ddd', borderRadius: '4px', background: 'white', cursor: 'pointer', fontWeight: 600 }}>◀</button>
@@ -681,7 +681,7 @@ function ProgramarClases() {
 
       <CalendarioMensual clases={clases} />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0 }}>Clases programadas</h3>
         <button
           onClick={descargarExcel}
@@ -848,7 +848,7 @@ function EditarClaseModal({ clase, educadoras, onClose, onGuardado }) {
         onClick={(e) => e.stopPropagation()}
         style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '420px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>✏️ Editar clase — {PROGRAMAS[clase.programa] || clase.programa}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
         </div>
@@ -991,7 +991,7 @@ function Corporativos() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3>Servicios "On The Go" — empresas y particulares</h3>
         <button className="btn" onClick={() => (showForm ? cerrarForm() : setShowForm(true))} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
           {showForm ? 'Cancelar' : '+ Nueva solicitud'}
