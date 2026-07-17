@@ -112,7 +112,7 @@ function AdminUsuarios() {
       </p>
 
       {showForm && (
-        <form onSubmit={handleCrear} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', alignItems: 'flex-end' }}>
+        <form onSubmit={handleCrear} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
           <div className="form-group">
             <label>Nombre *</label>
             <input type="text" value={formData.nombres} onChange={(e) => setFormData((p) => ({ ...p, nombres: e.target.value }))} style={inputStyle} required />
@@ -145,6 +145,7 @@ function AdminUsuarios() {
         </form>
       )}
 
+      <div className="table-wrap">
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
@@ -180,6 +181,7 @@ function AdminUsuarios() {
           ))}
         </tbody>
       </table>
+      </div>
 
       {editando && (
         <EditarUsuarioModal
@@ -351,6 +353,7 @@ function LogsIngreso() {
       {accesos.length === 0 ? (
         <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>Aún no hay ingresos registrados</p>
       ) : (
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
@@ -377,6 +380,7 @@ function LogsIngreso() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

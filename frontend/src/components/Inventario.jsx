@@ -87,7 +87,7 @@ export function Inventario() {
       {showForm && puedeEditar && (
         <form
           onSubmit={handleCrear}
-          style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}
+          style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}
         >
           <div className="form-group">
             <label>Nombre del material *</label>
@@ -112,6 +112,7 @@ export function Inventario() {
           <p>No hay materiales registrados en el inventario</p>
         </div>
       ) : (
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
@@ -170,6 +171,7 @@ export function Inventario() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );

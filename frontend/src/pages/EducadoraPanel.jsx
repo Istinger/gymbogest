@@ -197,6 +197,7 @@ function ListaDeClase({ claseId }) {
           No hay niños con reserva activa en esta clase
         </p>
       ) : (
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
@@ -270,6 +271,7 @@ function ListaDeClase({ claseId }) {
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       {ninoProgreso && (

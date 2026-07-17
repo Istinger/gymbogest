@@ -373,7 +373,9 @@ function CalendarioMensual({ clases }) {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+      {/* 7 columnas fijas (calendario): en pantallas angostas se desplaza horizontal */}
+      <div className="table-wrap">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', minWidth: '560px' }}>
         {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
           <div key={d} style={{ textAlign: 'center', fontWeight: 700, fontSize: '0.8rem', color: '#888', padding: '0.4rem 0' }}>
             {d}
@@ -422,6 +424,7 @@ function CalendarioMensual({ clases }) {
             )}
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -520,6 +523,7 @@ function SeguimientoFaltas() {
           Sin faltas registradas en el periodo "{ETIQUETAS[periodo]}" 🎉
         </p>
       ) : (
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem', fontSize: '0.88rem' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #dde', textAlign: 'left' }}>
@@ -544,6 +548,7 @@ function SeguimientoFaltas() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
@@ -641,7 +646,7 @@ function ProgramarClases() {
 
       <form
         onSubmit={handleSubmit}
-        style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}
+        style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}
       >
         <div className="form-group">
           <label>Programa *</label>
@@ -697,7 +702,7 @@ function ProgramarClases() {
       </div>
 
       {/* Filtros: programa, fecha, educadora y cupo */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', padding: '1rem', backgroundColor: '#f5f6ff', borderRadius: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', padding: '1rem', backgroundColor: '#f5f6ff', borderRadius: '8px' }}>
         <div className="form-group">
           <label style={{ fontSize: '0.85rem' }}>Programa</label>
           <select name="programa" value={filtros.programa} onChange={handleFiltro} style={inputStyle}>
@@ -752,6 +757,7 @@ function ProgramarClases() {
           {hayFiltros ? 'Ninguna clase coincide con los filtros' : 'No hay clases programadas'}
         </p>
       ) : (
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
@@ -793,6 +799,7 @@ function ProgramarClases() {
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       {editando && (
@@ -992,7 +999,7 @@ function Corporativos() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-accent-soft)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+        <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-accent-soft)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
           <div className="form-group">
             <label>Tipo *</label>
             <select value={formData.tipo} onChange={(e) => setFormData((p) => ({ ...p, tipo: e.target.value }))} style={inputStyle}>
@@ -1059,6 +1066,7 @@ function Corporativos() {
       ) : eventosFiltrados.length === 0 ? (
         <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>Ninguna solicitud coincide con la búsqueda</p>
       ) : (
+        <div className="table-wrap">
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '2px solid #eee', textAlign: 'left' }}>
@@ -1122,6 +1130,7 @@ function Corporativos() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </div>
   );
@@ -1243,7 +1252,7 @@ function GestionPaquetes() {
 
       {/* Crear / editar paquete */}
       <h3 style={{ marginBottom: '0.5rem' }}>{editandoId ? '✏️ Editar paquete' : 'Nuevo paquete del catálogo'}</h3>
-      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Nombre *</label>
           <input type="text" name="nombre" value={form.nombre} onChange={handleForm} required style={inputStyle} placeholder="Mensual 2 clases/semana" />

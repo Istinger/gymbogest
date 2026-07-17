@@ -140,7 +140,7 @@ export function Inscripciones() {
 
       {showForm && (
         <form onSubmit={handleSubmit} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
             <div className="form-group">
               <label>Nombre Tutor *</label>
               <input type="text" name="nombreTutor" value={formData.nombreTutor} onChange={handleChange} required />
@@ -400,7 +400,7 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
           {tutor && (
             <>
               <h4 style={{ marginBottom: '0.8rem' }}>Tutor</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.8rem' }}>
                 <div className="form-group">
                   <label>Nombre</label>
                   <input type="text" value={datosTutor.nombres} onChange={(e) => setDatosTutor((p) => ({ ...p, nombres: e.target.value }))} required disabled={loading} />
@@ -443,7 +443,7 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
                   key={nino.id}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr auto',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
                     gap: '0.8rem',
                     alignItems: 'end',
                     opacity: nino.activo ? 1 : 0.6,

@@ -102,7 +102,7 @@ export function AsignarClase() {
 
       <form
         onSubmit={handleSubmit}
-        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}
       >
         <div className="form-group">
           <label>Familia *</label>

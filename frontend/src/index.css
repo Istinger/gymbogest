@@ -626,6 +626,18 @@ select {
   100% { transform: rotate(360deg); }
 }
 
+/* ============ Utilidades responsive ============ */
+/* Tablas y grillas anchas: scroll horizontal propio en pantallas angostas,
+   para que la página nunca desborde (los estilos inline no admiten @media) */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-wrap > table {
+  min-width: 560px;
+}
+
 /* ============ Accesibilidad ============ */
 .skip-link {
   position: absolute;
