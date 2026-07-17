@@ -1,0 +1,75 @@
+# GymboGest — PRODUCCION en el VPS (junto a Jobia, detras de Nginx Proxy Manager)
+#
+# Diferencias clave con docker-compose.yml (desarrollo):
+#   - NO publica ningun puerto: NPM da la cara y enruta por dominio. Asi no hay
+#     choque de puertos con Jobia ni se expone la BD a internet.
+#   - El frontend se COMPILA y se sirve con nginx (Dockerfile.prod), no con Vite.
+#   - El frontend se conecta a la red externa `proxy` (la misma que usa NPM).
+#   - container_name propios (gymbogest-*) para no chocar con los de Jobia.
+#
+# Uso en el VPS:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml exec backend npx prisma migrate deploy
+#
+# NOTA sobre la base de datos: aqui va un Postgres INTERNO (autocontenido, como
+# Jobia). Si prefieres la BD en la nube (Azure, como en docs/despliegue_azure.md),
+# borra el servicio `db`, quita `depends_on: db` del backend y pon la DATABASE_URL
+# de la nube directamente en el .env.
+
+services:
+  db:
+    image: postgres:16
+    container_name: gymbogest-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    # SIN "ports:" -> la BD solo es accesible dentro de la red interna, nunca
+    # desde internet. (Publicarla seria un agujero: Docker se salta ufw.)
+    networks: [interna]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: gymbogest-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      JWT_SECRET: ${JWT_SECRET}
+      PORT: 3001
+      NODE_ENV: production
+    # SIN "ports:" -> el backend solo lo alcanza el frontend, por la red interna.
+    networks: [interna]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: gymbogest-frontend
+    restart: unless-stopped
+    # SIN "ports:" -> NPM le da la cara. El frontend esta en DOS redes: `proxy`
+    # (para que NPM lo alcance) e `interna` (para reenviar /api al backend).
+    networks: [proxy, interna]
+    depends_on:
+      - backend
+
+networks:
+  # Red compartida con NPM y con Jobia. Ya existe (docker network create proxy).
+  proxy:
+    external: true
+  # Red privada de GymboGest. Compose la aisla por proyecto: no choca con la de Jobia.
+  interna:
+
+volumes:
+  pgdata:
