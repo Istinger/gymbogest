@@ -301,6 +301,14 @@ export function DataProvider({ children }) {
     }, 'Solicitud On The Go actualizada', true);
   }, [axiosInstance, handleRequest]);
 
+  // Asigna materiales del inventario al evento (reemplaza la lista completa)
+  const asignarMaterialesCorporativo = useCallback(async (id, materiales) => {
+    return handleRequest(`asignarMateriales_${id}`, async () => {
+      const { data } = await axiosInstance.put(`/corporativos/${id}/materiales`, { materiales });
+      return data;
+    }, 'Materiales asignados correctamente', true);
+  }, [axiosInstance, handleRequest]);
+
   // Sign up público (sin token): crea cuenta con rol TUTOR por defecto
   const signUp = useCallback(async (datos) => {
     return handleRequest('signUp', async () => {
@@ -421,6 +429,7 @@ export function DataProvider({ children }) {
     createCorporativo,
     updateCorporativo,
     editCorporativo,
+    asignarMaterialesCorporativo,
     signUp,
     getUsuarios,
     createUsuario,

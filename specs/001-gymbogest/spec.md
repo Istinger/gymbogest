@@ -122,7 +122,8 @@ Como PROPIETARIA quiero el tablero con datos reales.
 Como PROPIETARIA quiero registrar y editar solicitudes On The Go de empresas
 y de particulares (familias que contratan una clase privada).
 **Aceptación:** solicitud con tipo (EMPRESA | PARTICULAR), empresa/solicitante, contacto,
-fecha y n.º de niños; asignación de educadora (pasa a CONFIRMADO); ciclo de estados
+fecha y n.º de niños; asignación de educadora (pasa a CONFIRMADO); asignación de
+materiales del inventario (con cantidad); ciclo de estados
 SOLICITADO → CONFIRMADO → EJECUTADO/CANCELADO; edición de los datos en cualquier
 estado (la Propietaria puede corregir incluso eventos ejecutados/cancelados);
 búsqueda por texto y filtros por tipo y estado en el listado.

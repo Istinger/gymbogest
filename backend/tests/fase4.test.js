@@ -155,6 +155,54 @@ describe('RF-08: servicios corporativos On The Go', () => {
       empresa: 'Banco ABC', contacto: 'rh@abc.com', fecha: '2026-10-05', numNinos: 20,
     })).rejects.toThrow(CorporativoNoEncontradoError);
   });
+
+  // --- Asignación de materiales del inventario al evento ---
+
+  function prismaConMateriales(evento) {
+    const tx = {
+      eventoMaterial: { deleteMany: jest.fn(), createMany: jest.fn() },
+      eventoCorporativo: {
+        findUnique: jest.fn().mockResolvedValue({ id: 1, ...evento, materiales: [] }),
+      },
+    };
+    return {
+      eventoCorporativo: { findUnique: jest.fn().mockResolvedValue(evento) },
+      eventoMaterial: {},
+      $transaction: jest.fn((fn) => fn(tx)),
+      _tx: tx,
+    };
+  }
+
+  test('asignar materiales reemplaza la lista (borra y recrea)', async () => {
+    const prisma = prismaConMateriales({ id: 1, estado: 'CONFIRMADO' });
+    const s = crearCorporativoService(prisma);
+    await s.asignarMateriales(1, [
+      { materialId: 3, cantidad: 10 },
+      { materialId: 5, cantidad: 2 },
+    ]);
+    expect(prisma._tx.eventoMaterial.deleteMany).toHaveBeenCalledWith({ where: { eventoId: 1 } });
+    expect(prisma._tx.eventoMaterial.createMany).toHaveBeenCalledWith({
+      data: [
+        { eventoId: 1, materialId: 3, cantidad: 10 },
+        { eventoId: 1, materialId: 5, cantidad: 2 },
+      ],
+    });
+  });
+
+  test('asignar materiales rechaza cantidad <= 0', async () => {
+    const prisma = prismaConMateriales({ id: 1, estado: 'CONFIRMADO' });
+    const s = crearCorporativoService(prisma);
+    await expect(s.asignarMateriales(1, [{ materialId: 3, cantidad: 0 }]))
+      .rejects.toThrow(CorporativoInvalidoError);
+  });
+
+  test('asignar materiales rechaza un evento inexistente', async () => {
+    const prisma = prismaConMateriales(null);
+    prisma.eventoCorporativo.findUnique = jest.fn().mockResolvedValue(null);
+    const s = crearCorporativoService(prisma);
+    await expect(s.asignarMateriales(99, [{ materialId: 3, cantidad: 1 }]))
+      .rejects.toThrow(CorporativoNoEncontradoError);
+  });
 });
 
 // ---------- T17: Pagos (mock Dátil) ----------

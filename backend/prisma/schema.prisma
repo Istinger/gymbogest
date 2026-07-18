@@ -250,7 +250,8 @@ model MaterialDidactico {
   stock       Int
   stockMinimo Int
 
-  clases ClaseMaterial[] // AGREGACIÓN: sobrevive aunque la clase se borre
+  clases  ClaseMaterial[]  // AGREGACIÓN: sobrevive aunque la clase se borre
+  eventos EventoMaterial[] // RF-08: usos del material en eventos On The Go
 }
 
 // Tabla intermedia de la AGREGACIÓN Clase◇MaterialDidactico
@@ -299,4 +300,17 @@ model EventoCorporativo {
 
   educadora   Empleado? @relation(fields: [educadoraId], references: [id])
   educadoraId Int?
+
+  materiales EventoMaterial[] // RF-08: materiales del inventario asignados al evento
+}
+
+// RF-08: materiales asignados a un evento On The Go (une evento ↔ inventario)
+model EventoMaterial {
+  evento     EventoCorporativo @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  eventoId   Int
+  material   MaterialDidactico @relation(fields: [materialId], references: [id]) // SIN cascada: el material sobrevive
+  materialId Int
+  cantidad   Int               @default(1)
+
+  @@id([eventoId, materialId])
 }

@@ -42,6 +42,16 @@ router.put('/:id/asignar', verificarToken, permitirRoles('PROPIETARIA'), async (
   catch (e) { error500(res, e, 'No se pudo asignar la educadora. Intenta de nuevo.'); }
 });
 
+// PUT /api/corporativos/:id/materiales — asigna materiales del inventario al evento
+router.put('/:id/materiales', verificarToken, permitirRoles('PROPIETARIA'), async (req, res) => {
+  try { res.json(await servicio.asignarMateriales(Number(req.params.id), req.body.materiales)); }
+  catch (e) {
+    if (e instanceof CorporativoInvalidoError) return res.status(400).json({ error: e.message });
+    if (e instanceof CorporativoNoEncontradoError) return res.status(404).json({ error: 'La solicitud ya no existe.' });
+    error500(res, e, 'No se pudieron asignar los materiales. Intenta de nuevo.');
+  }
+});
+
 // PUT /api/corporativos/:id/estado
 router.put('/:id/estado', verificarToken, permitirRoles('PROPIETARIA'), async (req, res) => {
   try { res.json(await servicio.cambiarEstado(Number(req.params.id), req.body.estado)); }

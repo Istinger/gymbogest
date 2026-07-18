@@ -68,14 +68,51 @@ function crearCorporativoService(prisma) {
     return prisma.eventoCorporativo.update({ where: { id }, data: { estado } });
   }
 
+  // Reemplaza la lista de materiales del evento por la recibida.
+  // materiales: [{ materialId, cantidad }]
+  async function asignarMateriales(id, materiales) {
+    const evento = await prisma.eventoCorporativo.findUnique({ where: { id } });
+    if (!evento) throw new CorporativoNoEncontradoError('evento no encontrado');
+
+    const items = (materiales || []).filter((m) => m && m.materialId);
+    for (const m of items) {
+      if (!m.cantidad || Number(m.cantidad) <= 0) {
+        throw new CorporativoInvalidoError('la cantidad de cada material debe ser mayor a 0');
+      }
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.eventoMaterial.deleteMany({ where: { eventoId: id } });
+      if (items.length) {
+        await tx.eventoMaterial.createMany({
+          data: items.map((m) => ({
+            eventoId: id,
+            materialId: Number(m.materialId),
+            cantidad: Number(m.cantidad),
+          })),
+        });
+      }
+      return tx.eventoCorporativo.findUnique({
+        where: { id },
+        include: {
+          educadora: { include: { persona: true } },
+          materiales: { include: { material: true } },
+        },
+      });
+    });
+  }
+
   async function listar() {
     return prisma.eventoCorporativo.findMany({
-      include: { educadora: { include: { persona: true } } },
+      include: {
+        educadora: { include: { persona: true } },
+        materiales: { include: { material: true } },
+      },
       orderBy: { fecha: 'asc' },
     });
   }
 
-  return { registrarSolicitud, editarSolicitud, asignarEducadora, cambiarEstado, listar };
+  return { registrarSolicitud, editarSolicitud, asignarEducadora, cambiarEstado, asignarMateriales, listar };
 }
 
 module.exports = {

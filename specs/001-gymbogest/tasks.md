@@ -32,6 +32,7 @@ Cada tarea referencia su historia (HF) y requerimiento (RF). Marcar al completar
 - [x] T16 · CRUD /api/corporativos (solicitudes On The Go). (RF-08) — corporativoService.js
 - [x] T17 · Pagos: POST /api/pagos con mock Dátil → numeroComprobante. — pagoService.js (integración real en backlog.md)
 - [x] T28 · On The Go ampliado: tipo EMPRESA|PARTICULAR (clases privadas de familias), PUT /api/corporativos/:id para editar en cualquier estado, filtros de búsqueda (texto/tipo/estado) y errores 500 sin detalle técnico al usuario. (RF-08) — pendiente reflejar TipoEvento en el diagrama de clases del Avance 6 (regla de oro)
+- [x] T29 · On The Go: asignar materiales del inventario al evento — tabla de unión EventoMaterial (evento *—* MaterialDidactico, con cantidad), PUT /api/corporativos/:id/materiales, y modal de asignación en el panel. (RF-08) — reflejar EventoMaterial en el diagrama de clases del Avance 6
 
 ## Fase 5 — Frontend React
 - [x] T18 · Layout base: banner, menú, footer (según wireframes Avance 7). Login + redirección por rol.

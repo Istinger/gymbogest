@@ -885,8 +885,10 @@ const TIPOS_EVENTO = {
 const CORPORATIVO_VACIO = { tipo: 'EMPRESA', empresa: '', contacto: '', fecha: '', numNinos: '' };
 
 function Corporativos() {
-  const { getCorporativos, createCorporativo, editCorporativo, updateCorporativo, clases, getClases, loading } = useData();
+  const { getCorporativos, createCorporativo, editCorporativo, updateCorporativo, getMateriales, clases, getClases, loading } = useData();
   const [eventos, setEventos] = useState([]);
+  const [inventario, setInventario] = useState([]); // materiales del inventario para el selector
+  const [materialesDe, setMaterialesDe] = useState(null); // evento cuyo modal de materiales está abierto
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(CORPORATIVO_VACIO);
   const [editandoId, setEditandoId] = useState(null); // null = creando
@@ -904,7 +906,8 @@ function Corporativos() {
   useEffect(() => {
     cargar();
     getClases(); // para derivar la lista de educadoras
-  }, [cargar, getClases]);
+    getMateriales().then((data) => data && setInventario(data)); // inventario para asignar
+  }, [cargar, getClases, getMateriales]);
 
   // Educadoras (Empleado) derivadas de las clases existentes
   const educadoras = [];
@@ -1076,6 +1079,7 @@ function Corporativos() {
               <th style={{ padding: '0.6rem' }}>Fecha</th>
               <th style={{ padding: '0.6rem' }}>Niños</th>
               <th style={{ padding: '0.6rem' }}>Educadora</th>
+              <th style={{ padding: '0.6rem' }}>Materiales</th>
               <th style={{ padding: '0.6rem' }}>Estado</th>
               <th style={{ padding: '0.6rem' }}></th>
             </tr>
@@ -1099,6 +1103,18 @@ function Corporativos() {
                       ))}
                     </select>
                   )}
+                </td>
+                <td style={{ padding: '0.6rem' }}>
+                  {/* Chip con el conteo → abre el modal (evita solapar la lista en la tabla) */}
+                  <button
+                    className="btn btn-ghost"
+                    onClick={() => setMaterialesDe(ev)}
+                    style={{ width: 'auto', minHeight: '36px', padding: '0.3rem 0.8rem', fontSize: '0.9rem', whiteSpace: 'nowrap' }}
+                  >
+                    📦 {ev.materiales?.length
+                      ? `${ev.materiales.length} ${ev.materiales.length === 1 ? 'material' : 'materiales'}`
+                      : 'Asignar'}
+                  </button>
                 </td>
                 <td style={{ padding: '0.6rem' }}>
                   <select
@@ -1132,6 +1148,128 @@ function Corporativos() {
         </table>
         </div>
       )}
+
+      {materialesDe && (
+        <MaterialesEventoModal
+          evento={materialesDe}
+          inventario={inventario}
+          onClose={() => setMaterialesDe(null)}
+          onGuardado={async () => { setMaterialesDe(null); await cargar(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------- Modal: asignar materiales del inventario a un evento On The Go ----------
+// Ventana en lugar de lista inline: escala a cualquier cantidad sin solapar la tabla.
+function MaterialesEventoModal({ evento, inventario, onClose, onGuardado }) {
+  const { asignarMaterialesCorporativo, loading } = useData();
+  // Lista editable de asignaciones: [{ materialId, cantidad }]
+  const [items, setItems] = useState(
+    (evento.materiales || []).map((m) => ({ materialId: m.materialId, cantidad: m.cantidad }))
+  );
+  const [nuevoId, setNuevoId] = useState('');
+
+  const nombreDe = (id) => inventario.find((m) => m.id === Number(id))?.nombre || `Material ${id}`;
+  // Solo se pueden agregar materiales que aún no están en la lista
+  const disponibles = inventario.filter((m) => !items.some((it) => Number(it.materialId) === m.id));
+
+  const agregar = () => {
+    if (!nuevoId) return;
+    setItems((prev) => [...prev, { materialId: Number(nuevoId), cantidad: 1 }]);
+    setNuevoId('');
+  };
+  const cambiarCantidad = (materialId, cantidad) =>
+    setItems((prev) => prev.map((it) => (it.materialId === materialId ? { ...it, cantidad } : it)));
+  const quitar = (materialId) =>
+    setItems((prev) => prev.filter((it) => it.materialId !== materialId));
+
+  const guardar = async () => {
+    if (items.some((it) => !it.cantidad || Number(it.cantidad) <= 0)) {
+      toast.warning('Cada material debe tener una cantidad mayor a 0');
+      return;
+    }
+    try {
+      await asignarMaterialesCorporativo(evento.id, items.map((it) => ({
+        materialId: Number(it.materialId),
+        cantidad: Number(it.cantidad),
+      })));
+      await onGuardado();
+    } catch (error) { /* toast en DataContext */ }
+  };
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '520px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+          <h3 style={{ margin: 0 }}>📦 Materiales del evento</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
+        </div>
+        <p className="login-subtitle" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>
+          {evento.empresa} · {new Date(evento.fecha).toLocaleDateString('es-EC')}
+        </p>
+
+        {/* Lista de materiales asignados */}
+        {items.length === 0 ? (
+          <p style={{ color: '#999', textAlign: 'center', padding: '1.5rem 0' }}>
+            Sin materiales asignados todavía
+          </p>
+        ) : (
+          <ul style={{ listStyle: 'none', margin: '0 0 1rem', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {items.map((it) => (
+              <li key={it.materialId} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.5rem 0.75rem', borderRadius: '8px', backgroundColor: 'var(--color-accent-soft)' }}>
+                <span style={{ flex: 1, fontWeight: 600 }}>📦 {nombreDe(it.materialId)}</span>
+                <input
+                  type="number"
+                  min="1"
+                  value={it.cantidad}
+                  onChange={(e) => cambiarCantidad(it.materialId, e.target.value)}
+                  style={{ width: '80px', padding: '0.4rem', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-fg)' }}
+                  aria-label={`Cantidad de ${nombreDe(it.materialId)}`}
+                />
+                <button
+                  onClick={() => quitar(it.materialId)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--color-danger)' }}
+                  aria-label={`Quitar ${nombreDe(it.materialId)}`}
+                >
+                  🗑️
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Agregar material del inventario */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+          <select
+            value={nuevoId}
+            onChange={(e) => setNuevoId(e.target.value)}
+            style={{ flex: 1, padding: '0.6rem', borderRadius: '6px', border: '1px solid var(--color-border)', background: 'var(--color-bg)', color: 'var(--color-fg)' }}
+            disabled={disponibles.length === 0}
+          >
+            <option value="">
+              {disponibles.length === 0 ? 'No hay más materiales en el inventario' : 'Agregar material del inventario...'}
+            </option>
+            {disponibles.map((m) => (
+              <option key={m.id} value={m.id}>{m.nombre} (stock: {m.stock})</option>
+            ))}
+          </select>
+          <button className="btn btn-ghost" onClick={agregar} disabled={!nuevoId} style={{ width: 'auto', padding: '0 1rem' }}>
+            + Agregar
+          </button>
+        </div>
+
+        <button className="btn" onClick={guardar} disabled={loading} style={{ width: '100%' }}>
+          {loading ? 'Guardando...' : '💾 Guardar materiales'}
+        </button>
+      </div>
     </div>
   );
 }
