@@ -9,6 +9,20 @@ const PARENTESCOS = ['padre', 'madre', 'abuelo', 'abuela', 'otro'];
 const normalizar = (texto) =>
   (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+// Un niño en la lista (reutilizado en la tabla y en el modal de familia numerosa)
+function NinoItem({ nino }) {
+  return (
+    <div style={{ marginBottom: '0.2rem', opacity: nino.activo === false ? 0.55 : 1 }}>
+      🧒 {nino.nombres}
+      {nino.activo === false && (
+        <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-danger)', border: '1px solid var(--color-danger)', borderRadius: '999px', padding: '0 0.5rem' }}>
+          inactivo
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function Inscripciones() {
   const { familias, loading, getFamilias, createFamilia } = useData();
   const [showForm, setShowForm] = useState(false);
@@ -16,6 +30,7 @@ export function Inscripciones() {
   const [limite, setLimite] = useState(10); // últimos N registrados (5, 10 o todas)
   const [familiaEditar, setFamiliaEditar] = useState(null); // extensión CU-01: corregir typos
   const [familiaPaquetes, setFamiliaPaquetes] = useState(null); // extensión RF-03: contratar/ver paquetes
+  const [ninosDe, setNinosDe] = useState(null); // familia numerosa (>3): modal con todos sus niños
   const [formData, setFormData] = useState({
     nombreTutor: '',
     cedulaTutor: '',
@@ -223,22 +238,18 @@ export function Inscripciones() {
                   <tr key={familia.id} style={{ borderBottom: '1px solid #eee' }}>
                     <td style={{ padding: '1rem' }}>
                       {familia.ninos?.length ? (
-                        familia.ninos.map((nino) => (
-                          <div
-                            key={nino.id}
-                            style={{
-                              marginBottom: '0.2rem',
-                              opacity: nino.activo === false ? 0.55 : 1,
-                            }}
+                        // ≤3 niños: se listan inline. >3: chip que abre el modal (fila compacta y uniforme)
+                        familia.ninos.length <= 3 ? (
+                          familia.ninos.map((nino) => <NinoItem key={nino.id} nino={nino} />)
+                        ) : (
+                          <button
+                            onClick={() => setNinosDe(familia)}
+                            title="Ver todos los niños de la familia"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem', border: '1px solid var(--color-border)', borderRadius: '999px', background: 'var(--color-accent-soft)', color: 'var(--color-fg)', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}
                           >
-                            🧒 {nino.nombres}
-                            {nino.activo === false && (
-                              <span style={{ marginLeft: '0.4rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-danger)', border: '1px solid var(--color-danger)', borderRadius: '999px', padding: '0 0.5rem' }}>
-                                inactivo
-                              </span>
-                            )}
-                          </div>
-                        ))
+                            👨‍👩‍👧 Ver los {familia.ninos.length} niños
+                          </button>
+                        )
                       ) : (
                         <span style={{ color: '#999' }}>Sin niños</span>
                       )}
@@ -315,6 +326,44 @@ export function Inscripciones() {
           onGuardado={() => { setFamiliaPaquetes(null); getFamilias(); }}
         />
       )}
+
+      {ninosDe && (
+        <NinosFamiliaModal familia={ninosDe} onClose={() => setNinosDe(null)} />
+      )}
+    </div>
+  );
+}
+
+// Modal de solo lectura: lista completa de niños de una familia numerosa (>3).
+function NinosFamiliaModal({ familia, onClose }) {
+  const tutor = familia.tutores?.[0];
+  const activos = familia.ninos.filter((n) => n.activo !== false).length;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '420px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+          <h3 style={{ margin: 0 }}>👨‍👩‍👧 Niños de la familia</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
+        </div>
+        {tutor && (
+          <p style={{ color: 'var(--color-muted)', fontSize: '0.9rem', marginBottom: '1rem', textTransform: 'capitalize' }}>
+            Tutor: {tutor.persona?.nombres} ({tutor.parentesco})
+          </p>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+          {familia.ninos.map((nino) => <NinoItem key={nino.id} nino={nino} />)}
+        </div>
+        <p style={{ color: 'var(--color-muted)', fontSize: '0.85rem', marginTop: '1rem', borderTop: '1px solid var(--color-border)', paddingTop: '0.75rem' }}>
+          Total: {familia.ninos.length} niños · {activos} activo{activos !== 1 ? 's' : ''}
+        </p>
+      </div>
     </div>
   );
 }
