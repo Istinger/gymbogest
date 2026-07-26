@@ -44,7 +44,7 @@ export function PropietariaPanel() {
       <div className="panel">
         <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-            👑 Panel de Propietaria
+            👩‍🏫  Panel de Propietaria
           </h2>
           <p style={{ color: '#666', fontSize: '1.1rem' }}>
             Indicadores del negocio y servicios corporativos
