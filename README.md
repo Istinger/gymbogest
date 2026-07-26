@@ -1,120 +1,129 @@
 # GymboGest
 
-Sistema web de gestión para **Gymboree Play & Music — Sede Los Chillos** (estimulación
-temprana, niños 0–6 años). Proyecto final de Análisis y Diseño de Sistemas, UPS, Periodo 68.
+**Sistema web de gestión para Gymboree Play & Music — Sede Los Chillos**
+Estimulación temprana para niños de 0 a 6 años · Quito, Ecuador
 
-## Qué resuelve
-- Agendamiento de clases con control de cupo (máx. 9 niños) y reservas en línea para padres.
-- Inscripciones con registro del canal de origen (mide la estrategia MAX-MAX del negocio).
-- Asistencia, seguimiento del desarrollo, inventario de material didáctico.
-- Tablero de indicadores reales para la propietaria y gestión de servicios corporativos (On The Go).
+Proyecto final de *Análisis y Diseño de Sistemas* — Universidad Politécnica Salesiana, Periodo 68.
 
-## Stack (PERN)
-React · Node/Express · **PostgreSQL + Prisma**. Desarrollo guiado por especificación
-(*Spec-Driven Development*): ver `specs/`.
 
-## Trazabilidad
-`backend/prisma/schema.prisma` implementa 1:1 el **diagrama de clases** del proyecto
-(Persona→Tutor/Empleado por herencia, composiciones Familia◆Nino y Paquete◆Reserva,
-agregación Clase◇MaterialDidactico). Cada endpoint referencia su requerimiento (RF-XX).
-Ver `database/modelo_er.png` para el diagrama entidad-relación completo.
+`React` · `Node/Express` · `PostgreSQL + Prisma` · `Docker` · `JWT`
 
-## Instalación
+---
 
-Este proyecto tiene **dos servicios**: la base de datos PostgreSQL y la API backend
-(Node/Express). Docker Compose siempre levanta la base de datos; el backend puedes
-correrlo en tu propia máquina (necesitas Node.js instalado) o también en Docker.
+## El problema
 
-### Paso 0 — Configurar variables de entorno (una sola vez)
-Las claves NUNCA van escritas directo en `docker-compose.yml` ni en el código;
-se leen de un archivo `.env` que no se sube a git (ver `.gitignore`).
-```bash
-cp .env.example .env            # completar POSTGRES_PASSWORD y JWT_SECRET con valores reales
-cp backend/.env.example backend/.env   # usar los MISMOS valores que en el .env de la raíz
+El centro gestionaba todo en cuadernos y hojas de cálculo sueltas. Eso provocaba tres
+problemas que este sistema resuelve:
+
+| Problema del negocio | Cómo lo resuelve GymboGest |
+|---|---|
+| Clases sobrevendidas: más de 9 niños en un aula pensada para 9 | Control de cupo **transaccional** (aislamiento `Serializable`): dos padres que reservan el último lugar a la vez nunca pasan los dos |
+| No se sabía qué campaña traía clientes | Cada inscripción registra su **canal de captación** (redes, pediatra, referido…) y el panel lo grafica |
+| La propietaria no tenía cifras para decidir | Tablero de **indicadores reales** calculados sobre la base de datos, no estimados |
+
+Además cubre asistencia, seguimiento del desarrollo de cada niño, inventario de material
+didáctico, paquetes de clases con vencimiento y los servicios corporativos *On The Go*.
+
+## Qué hace cada rol
+
+El acceso está segmentado por rol (RNF-01). Tras iniciar sesión, cada usuario aterriza
+en su propio panel y solo ve lo que le corresponde.
+
+| Rol | Panel | Puede hacer |
+|---|---|---|
+| **TUTOR** (padre/madre) | `/panel/tutor` | Reservar, reagendar y cancelar clases en línea; ver el progreso **solo de sus hijos** |
+| **RECEPCION** | `/panel/recepcion` | Inscribir familias, agenda del día con cupo `X / 9`, asignar clases, inventario |
+| **EDUCADORA** | `/panel/educadora` | Lista de **sus** clases asignadas, registrar asistencia y progreso |
+| **PROPIETARIA** | `/panel/propietaria` | Indicadores, programación de clases, catálogo de paquetes, corporativos On The Go |
+| **ADMIN** | `/panel/admin` | Cuentas de usuario y bitácora de ingresos |
+
+El registro público crea **siempre** un TUTOR; los roles ADMIN y PROPIETARIA están
+protegidos y no pueden asignarse desde la gestión de cuentas.
+
+
+## Arquitectura
+
+```
+Navegador ──▶ React (Vite, :5173) ──▶ API Express (:3001) ──▶ PostgreSQL (:5432)
+                                            │                      │
+                                       JWT + roles           triggers de auditoría
 ```
 
-### Opción A — Desarrollo normal (recomendada)
-Requiere tener [Node.js](https://nodejs.org) instalado (trae `npm` incluido).
+**20 modelos** Prisma · **50 endpoints** repartidos en 14 módulos de rutas 
+
+---
+
+## Puesta en marcha
+
+### Paso 0 — Variables de entorno (una sola vez)
+
+Las claves nunca van escritas en el código ni en `docker-compose.yml`.
+
 ```bash
-docker compose up -d db        # solo la base de datos, en segundo plano
-cd backend
-npm install                    # descarga las dependencias listadas en package.json
-npx prisma migrate dev         # crea las tablas desde schema.prisma
-npm run seed                   # datos de ejemplo
-npm run dev                    # API en http://localhost:3001 (hot-reload)
+cp .env.example .env                    # completar POSTGRES_PASSWORD y JWT_SECRET
+cp backend/.env.example backend/.env    # los MISMOS valores que en el .env de la raíz
 ```
 
-### Opción B — Todo en Docker (sin instalar Node.js)
+### Opción A — Todo en Docker (no necesitas instalar Node.js)
+
 ```bash
 docker compose --profile full up -d --build
-docker compose exec backend npx prisma migrate dev
 docker compose exec backend npm run seed
-# API en http://localhost:3001
+```
+
+- Frontend → <http://localhost:5173>
+- API → <http://localhost:3001>
+
+El contenedor regenera el cliente Prisma y aplica las migraciones en cada arranque, así
+que tras cambiar `schema.prisma` basta con crear la migración y reiniciar el backend.
+
+### Opción B — Desarrollo con Node.js local
+
+```bash
+docker compose up -d db          # solo la base de datos
+cd backend
+npm install
+npx prisma migrate dev           # crea las tablas desde schema.prisma
+npm run seed                     # datos de ejemplo
+npm run dev                      # API con hot-reload
+
+cd ../frontend && npm install && npm run dev
 ```
 
 ### Verificar que funciona
+
 ```bash
 curl http://localhost:3001/api/salud
 # → {"ok":true,"sistema":"GymboGest"}
 ```
 
-## Pruebas
+### Cuentas de ejemplo (tras `npm run seed`)
 
-### Unitarias (no requieren base de datos — usan un Prisma falso inyectado)
-```bash
-docker compose exec backend npm test
-```
+| Rol | Correo | Contraseña |
+|---|---|---|
+| Admin | `admin@gymbo.ec` | `admin123` |
+| Propietaria | `propietaria@gymbo.ec` | `semilla123` |
+| Recepción | `recepcion@gymbo.ec` | `semilla123` |
+| Educadora | `educadora1@gymbo.ec` · `educadora2@gymbo.ec` | `semilla123` |
 
-### Integración (requieren una BD de prueba aparte, para no tocar tus datos reales)
-```bash
-# 1. Crear la BD de prueba (una sola vez)
-docker compose exec db createdb -U gymbo gymbogest_test
+## Respaldo
 
-# 2. Migrar y sembrar ESA base (nota el -e para apuntar a gymbogest_test)
-docker compose exec -e DATABASE_URL="postgresql://gymbo:TU_PASSWORD@db:5432/gymbogest_test" \
-  backend npx prisma migrate deploy
-docker compose exec -e DATABASE_URL="postgresql://gymbo:TU_PASSWORD@db:5432/gymbogest_test" \
-  backend npm run seed
-
-# 3. Ejecutar las pruebas de integración contra esa base
-docker compose exec -e DATABASE_URL="postgresql://gymbo:TU_PASSWORD@db:5432/gymbogest_test" \
-  backend npm run test:integration
-```
-Reemplaza `TU_PASSWORD` por el valor real de `POSTGRES_PASSWORD` en tu `.env`.
-Prueban: login válido/inválido, autorización por rol (401/403/200) y el rechazo
-del cupo lleno de extremo a extremo (HTTP real, no simulado).
-
-## Auditoría
-Después de migrar (`npx prisma migrate dev` o `migrate deploy`), aplicar los triggers
-de auditoría (RNF-07) **una sola vez** por base de datos:
-```bash
-docker compose exec -T db psql -U gymbo -d gymbogest < database/triggers_auditoria.sql
-```
-No están dentro de las migraciones de Prisma a propósito: Prisma no gestiona bien
-funciones/triggers PL/pgSQL puros en su sistema de migraciones versionadas.
-Verificar que quedaron activos:
-```bash
-docker compose exec db psql -U gymbo -d gymbogest -c \
-  "SELECT tgname FROM pg_trigger WHERE tgname LIKE 'trg_auditoria%';"   # deben salir 8 filas
-```
-
-## Respaldo de base de datos
 ```bash
 ./scripts/backup.sh     # genera database/backups/gymbogest_<fecha>.sql
 ```
-Requisito de la rúbrica: `database/respaldo_gymbogest.sql` debe existir en el repo final.
 
-## Despliegue en la nube
-Ver `docs/despliegue_azure.md` — coincide con el diagrama de despliegue del Avance 6
-(Azure Container Apps + Azure Database for PostgreSQL). `backend/Dockerfile.prod` es
-la imagen lista para producción (multi-stage, sin devDependencies, usuario no-root).
+## Despliegue
+
+`docs/despliegue-gymboree.md` documenta el despliegue en **VPS propio** detrás de Nginx
+Proxy Manager, con PostgreSQL en Docker dentro del mismo servidor.
+`backend/Dockerfile.prod` es la imagen de producción: multi-stage, sin devDependencies y
+con usuario no-root. Ver también `docker-compose.prod.yml`.
 
 ## Estructura
+
 ```
-specs/          especificación, plan y tareas (SDD)
-backend/        API Express + Prisma (Dockerfile dev + Dockerfile.prod)
-frontend/       React (Vite)
-database/       respaldo SQL, triggers de auditoría, modelo ER
-scripts/        backup.sh
-docs/           guía de despliegue en Azure
+backend/     API Express + Prisma (Dockerfile dev + Dockerfile.prod)
+frontend/    React + Vite (8 páginas, 9 componentes)
+database/    triggers de auditoría y respaldos
+scripts/     backup.sh
 ```
