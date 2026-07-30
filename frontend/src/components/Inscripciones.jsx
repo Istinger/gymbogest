@@ -106,7 +106,7 @@ export function Inscripciones() {
 
   return (
     <div style={{ marginBottom: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3>Inscripciones de Familias</h3>
         <button className="btn" onClick={() => setShowForm(!showForm)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
           {showForm ? 'Cancelar' : '+ Nueva Inscripción'}
@@ -155,7 +155,7 @@ export function Inscripciones() {
 
       {showForm && (
         <form onSubmit={handleSubmit} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: '1rem' }}>
             <div className="form-group">
               <label>Nombre Tutor *</label>
               <input type="text" name="nombreTutor" value={formData.nombreTutor} onChange={handleChange} required />
@@ -346,9 +346,9 @@ function NinosFamiliaModal({ familia, onClose }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '420px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '420px', maxHeight: '85dvh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.25rem' }}>
           <h3 style={{ margin: 0 }}>👨‍👩‍👧 Niños de la familia</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
         </div>
@@ -438,9 +438,9 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '520px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '520px', maxHeight: '85dvh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>✏️ Corregir inscripción</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
         </div>
@@ -449,7 +449,7 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
           {tutor && (
             <>
               <h4 style={{ marginBottom: '0.8rem' }}>Tutor</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.8rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))', gap: '0.8rem' }}>
                 <div className="form-group">
                   <label>Nombre</label>
                   <input type="text" value={datosTutor.nombres} onChange={(e) => setDatosTutor((p) => ({ ...p, nombres: e.target.value }))} required disabled={loading} />
@@ -492,7 +492,7 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
                   key={nino.id}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(140px, 100%), 1fr))',
                     gap: '0.8rem',
                     alignItems: 'end',
                     opacity: nino.activo ? 1 : 0.6,
@@ -597,9 +597,9 @@ function PaquetesFamiliaModal({ familia, onClose, onGuardado }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '520px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '520px', maxHeight: '85dvh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>📦 Paquetes de la familia</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
         </div>

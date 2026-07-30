@@ -100,7 +100,7 @@ function AdminUsuarios() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3>Cuentas de usuario</h3>
         <button className="btn" onClick={() => setShowForm(!showForm)} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
           {showForm ? 'Cancelar' : '+ Nueva cuenta'}
@@ -112,7 +112,7 @@ function AdminUsuarios() {
       </p>
 
       {showForm && (
-        <form onSubmit={handleCrear} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
+        <form onSubmit={handleCrear} style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(200px, 100%), 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
           <div className="form-group">
             <label>Nombre *</label>
             <input type="text" value={formData.nombres} onChange={(e) => setFormData((p) => ({ ...p, nombres: e.target.value }))} style={inputStyle} required />
@@ -238,9 +238,9 @@ function EditarUsuarioModal({ usuario, onClose, onGuardado }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '440px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '440px', maxHeight: '85dvh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>✏️ Editar cuenta</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
         </div>
@@ -343,7 +343,7 @@ function LogsIngreso() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3>Últimos ingresos al sistema</h3>
         <button className="btn" onClick={cargar} style={{ width: 'auto', padding: '0.5rem 1rem' }}>
           🔄 Actualizar

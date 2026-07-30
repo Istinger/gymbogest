@@ -115,7 +115,7 @@ function TableroIndicadores() {
   return (
     <div>
       {/* KPIs: número grande + contexto, un tinte suave por tarjeta (60-30-10) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(190px, 100%), 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         <KpiCard icono="🧒" valor={tablero.ninosActivos} etiqueta="Niños activos" color={PALETA.naranja} tinte={PALETA.naranjaSoft} />
         <KpiCard icono="👨‍👩‍👧" valor={tablero.inscritos?.total ?? 0} etiqueta="Familias inscritas (último mes)" color={PALETA.azul} tinte={PALETA.azulSoft} />
         <KpiCard
@@ -132,7 +132,7 @@ function TableroIndicadores() {
         />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
         {/* Métrica clave de la estrategia MAX-MAX: inscripciones por canal */}
         <PanelCard titulo="⭐ Inscripciones por canal de origen"
           descripcion="Estrategia MAX-MAX: qué canal trae más familias. El líder se destaca en el naranja de la marca.">
@@ -354,9 +354,10 @@ function CalendarioMensual({ clases }) {
     <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '14px', border: '1px solid var(--color-border, #e5e5e5)', backgroundColor: 'var(--color-surface, #fff)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0 }}>🗓️ Calendario de educadoras</h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
           <button onClick={() => cambiarMes(-1)} style={{ padding: '0.4rem 0.8rem', border: '1px solid #ddd', borderRadius: '4px', background: 'white', cursor: 'pointer', fontWeight: 600 }}>◀</button>
-          <strong style={{ minWidth: '160px', textAlign: 'center', textTransform: 'capitalize' }}>
+          {/* minWidth fijo desbordaba en pantallas de 320px */}
+          <strong style={{ minWidth: 'min(160px, 100%)', textAlign: 'center', textTransform: 'capitalize' }}>
             {mes.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' })}
           </strong>
           <button onClick={() => cambiarMes(1)} style={{ padding: '0.4rem 0.8rem', border: '1px solid #ddd', borderRadius: '4px', background: 'white', cursor: 'pointer', fontWeight: 600 }}>▶</button>
@@ -489,7 +490,7 @@ function SeguimientoFaltas() {
             Niños que faltaron a clases con el contacto de su tutor, para dar seguimiento por llamada o WhatsApp.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <select
             value={periodo}
             onChange={(e) => setPeriodo(e.target.value)}
@@ -646,7 +647,7 @@ function ProgramarClases() {
 
       <form
         onSubmit={handleSubmit}
-        style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}
+        style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '1rem', alignItems: 'flex-end' }}
       >
         <div className="form-group">
           <label>Programa *</label>
@@ -702,7 +703,7 @@ function ProgramarClases() {
       </div>
 
       {/* Filtros: programa, fecha, educadora y cupo */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', padding: '1rem', backgroundColor: '#f5f6ff', borderRadius: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem', padding: '1rem', backgroundColor: '#f5f6ff', borderRadius: '8px' }}>
         <div className="form-group">
           <label style={{ fontSize: '0.85rem' }}>Programa</label>
           <select name="programa" value={filtros.programa} onChange={handleFiltro} style={inputStyle}>
@@ -846,7 +847,7 @@ function EditarClaseModal({ clase, educadoras, onClose, onGuardado }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '420px', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '90%', maxWidth: '420px', maxHeight: '85dvh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>✏️ Editar clase — {PROGRAMAS[clase.programa] || clase.programa}</h3>
@@ -1002,7 +1003,7 @@ function Corporativos() {
       </div>
 
       {showForm && (
-        <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-accent-soft)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
+        <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-accent-soft)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
           <div className="form-group">
             <label>Tipo *</label>
             <select value={formData.tipo} onChange={(e) => setFormData((p) => ({ ...p, tipo: e.target.value }))} style={inputStyle}>
@@ -1109,7 +1110,7 @@ function Corporativos() {
                   <button
                     className="btn btn-ghost"
                     onClick={() => setMaterialesDe(ev)}
-                    style={{ width: 'auto', minHeight: '36px', padding: '0.3rem 0.8rem', fontSize: '0.9rem', whiteSpace: 'nowrap' }}
+                    style={{ width: 'auto', minHeight: '44px', padding: '0.3rem 0.8rem', fontSize: '0.9rem', whiteSpace: 'nowrap' }}
                   >
                     📦 {ev.materiales?.length
                       ? `${ev.materiales.length} ${ev.materiales.length === 1 ? 'material' : 'materiales'}`
@@ -1206,9 +1207,9 @@ function MaterialesEventoModal({ evento, inventario, onClose, onGuardado }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '520px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
+        style={{ backgroundColor: 'var(--color-surface)', borderRadius: '8px', padding: '1.5rem', width: '100%', maxWidth: '520px', maxHeight: '85dvh', overflowY: 'auto', boxShadow: '0 10px 40px rgba(0,0,0,0.2)' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.25rem' }}>
           <h3 style={{ margin: 0 }}>📦 Materiales del evento</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: '#999' }} aria-label="Cerrar">✕</button>
         </div>
@@ -1362,12 +1363,12 @@ function GestionPaquetes() {
         </p>
         {configPrueba && (
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, cursor: 'pointer' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, cursor: 'pointer', minHeight: '44px' }}>
               <input
                 type="checkbox"
                 checked={configPrueba.habilitado}
                 onChange={(e) => setConfigPrueba((p) => ({ ...p, habilitado: e.target.checked }))}
-                style={{ width: '18px', height: '18px' }}
+                style={{ width: '22px', height: '22px' }}
               />
               {configPrueba.habilitado ? 'Habilitada' : 'Deshabilitada'}
             </label>
@@ -1390,7 +1391,7 @@ function GestionPaquetes() {
 
       {/* Crear / editar paquete */}
       <h3 style={{ marginBottom: '0.5rem' }}>{editandoId ? '✏️ Editar paquete' : 'Nuevo paquete del catálogo'}</h3>
-      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
+      <form onSubmit={handleSubmit} style={{ backgroundColor: 'var(--color-bg)', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(150px, 100%), 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
         <div>
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.3rem' }}>Nombre *</label>
           <input type="text" name="nombre" value={form.nombre} onChange={handleForm} required style={inputStyle} placeholder="Mensual 2 clases/semana" />

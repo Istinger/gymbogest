@@ -122,7 +122,7 @@ export function NuevaReserva() {
     <div style={{ backgroundColor: '#f9f9f9', padding: '1.5rem', borderRadius: '8px', marginBottom: '2rem' }}>
       <h3 style={{ marginBottom: '1rem' }}>Crear Nueva Reserva</h3>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(160px, 100%), 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
         <div className="form-group">
           <label>Selecciona un hijo *</label>
           <select

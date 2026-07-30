@@ -132,7 +132,7 @@ export function MisReservas() {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: '1.5rem' }}>
         {reservas.map((reserva) => (
           <div
             key={reserva.id}
@@ -277,10 +277,14 @@ function ReagendarModal({ reserva, onReagendar, onClose, isLoading }) {
           padding: '1.5rem',
           width: '90%',
           maxWidth: '480px',
+          // el overlay es position:fixed — sin esto el modal no se puede
+          // desplazar en pantallas bajas (teléfono con teclado abierto)
+          maxHeight: '85dvh',
+          overflowY: 'auto',
           boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>📅 Reagendar reserva</h3>
           <button
             onClick={onClose}

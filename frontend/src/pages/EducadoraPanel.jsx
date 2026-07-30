@@ -69,7 +69,7 @@ export function EducadoraPanel() {
           <h3 style={{ marginBottom: '1rem' }}>
             {esEducadora ? 'Mis clases asignadas' : 'Educadoras y sus clases asignadas'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))', gap: '1rem', marginBottom: '2rem' }}>
             {educadoras.map((edu) => (
               <div
                 key={edu.nombre}
@@ -93,6 +93,10 @@ export function EducadoraPanel() {
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
+                        // programa + horario no caben en una línea en teléfono:
+                        // se apilan en vez de desbordar la tarjeta
+                        flexWrap: 'wrap',
+                        gap: '0.25rem 0.6rem',
                         width: '100%',
                         padding: '0.6rem 0.8rem',
                         marginBottom: '0.4rem',
@@ -175,6 +179,8 @@ function ListaDeClase({ claseId }) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '0.75rem',
           marginBottom: '1rem',
           padding: '1rem',
           backgroundColor: '#f0f4ff',
@@ -339,7 +345,7 @@ function ProgresoModal({ nino, onClose }) {
           boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
           <h3 style={{ margin: 0 }}>📈 Progreso de {nino.nombres}</h3>
           <button
             onClick={onClose}
