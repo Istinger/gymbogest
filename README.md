@@ -119,11 +119,4 @@ Proxy Manager, con PostgreSQL en Docker dentro del mismo servidor.
 `backend/Dockerfile.prod` es la imagen de producción: multi-stage, sin devDependencies y
 con usuario no-root. Ver también `docker-compose.prod.yml`.
 
-## Estructura
 
-```
-backend/     API Express + Prisma (Dockerfile dev + Dockerfile.prod)
-frontend/    React + Vite (8 páginas, 9 componentes)
-database/    triggers de auditoría y respaldos
-scripts/     backup.sh
-```
