@@ -9,6 +9,33 @@ const PARENTESCOS = ['padre', 'madre', 'abuelo', 'abuela', 'otro'];
 const normalizar = (texto) =>
   (texto || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+// HF-1 · rango de edad 0–6 años (mismo criterio que familiaService.js).
+// Se calcula en cada render, no al cargar el módulo, para que una pestaña
+// abierta desde ayer no arrastre los límites de ayer.
+const EDAD_MAXIMA_ANIOS = 7;
+function rangoFechaNacimiento() {
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const hoy = new Date();
+  return {
+    max: iso(hoy), // no puede ser futura
+    // La elegibilidad termina en el 7º cumpleaños: el nacimiento más antiguo
+    // válido es un día después de "hoy hace 7 años".
+    min: iso(new Date(hoy.getFullYear() - EDAD_MAXIMA_ANIOS, hoy.getMonth(), hoy.getDate() + 1)),
+  };
+}
+
+// ¿La fecha ya guardada cae dentro del rango 0–6 años?
+// Los niños inscritos ANTES de esta validación pueden tener fechas fuera de
+// rango; poner min/max sobre ellas haría que el navegador bloquee el envío de
+// TODO el formulario (sin mensaje), impidiendo corregirles el nombre o darlos
+// de baja. En ese caso se omiten los límites y el backend sigue validando
+// cualquier CAMBIO real de la fecha.
+const fechaDentroDeRango = (iso) => {
+  if (!iso) return true;
+  const { min, max } = rangoFechaNacimiento();
+  return iso >= min && iso <= max;
+};
+
 // Un niño en la lista (reutilizado en la tabla y en el modal de familia numerosa)
 function NinoItem({ nino }) {
   return (
@@ -41,6 +68,8 @@ export function Inscripciones() {
     fechaNacimiento: '',
     canalOrigen: 'REDES',
   });
+
+  const rangoEdad = rangoFechaNacimiento();
 
   useEffect(() => {
     getFamilias();
@@ -188,7 +217,19 @@ export function Inscripciones() {
             </div>
             <div className="form-group">
               <label>Fecha Nacimiento *</label>
-              <input type="date" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} required />
+              {/* HF-1: el centro atiende de 0 a 6 años (el backend valida igual) */}
+              <input
+                type="date"
+                name="fechaNacimiento"
+                value={formData.fechaNacimiento}
+                onChange={handleChange}
+                min={rangoEdad.min}
+                max={rangoEdad.max}
+                required
+              />
+              <small style={{ color: 'var(--color-muted)', fontSize: '0.8rem' }}>
+                Niños de 0 a 6 años
+              </small>
             </div>
             <div className="form-group">
               <label>Canal de Origen *</label>
@@ -375,6 +416,7 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
   const { updateTutor, updateNino, loading } = useData();
   const tutor = familia.tutores?.[0];
   const puedeEditarCedula = rol === 'PROPIETARIA';
+  const rangoEdad = rangoFechaNacimiento();
 
   const [datosTutor, setDatosTutor] = useState({
     nombres: tutor?.persona?.nombres || '',
@@ -415,14 +457,14 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
       for (const nino of datosNinos) {
         const original = familia.ninos.find((n) => n.id === nino.id);
         const activoOriginal = original.activo !== false;
-        if (nino.nombres !== original.nombres
-            || nino.fechaNacimiento !== (original.fechaNacimiento?.split('T')[0] || '')
-            || nino.activo !== activoOriginal) {
-          await updateNino(nino.id, {
-            nombres: nino.nombres,
-            fechaNacimiento: nino.fechaNacimiento,
-            activo: nino.activo,
-          });
+        const fechaCambio = nino.fechaNacimiento !== (original.fechaNacimiento?.split('T')[0] || '');
+        if (nino.nombres !== original.nombres || fechaCambio || nino.activo !== activoOriginal) {
+          const cambios = { nombres: nino.nombres, activo: nino.activo };
+          // La fecha SOLO viaja si cambió: los niños registrados antes de la
+          // validación 0–6 años (HF-1) tienen fechas fuera de rango, y
+          // reenviarlas bloquearía corregirles el nombre o darlos de baja.
+          if (fechaCambio) cambios.fechaNacimiento = nino.fechaNacimiento;
+          await updateNino(nino.id, cambios);
         }
       }
       onGuardado();
@@ -504,7 +546,35 @@ function EditarFamiliaModal({ familia, onClose, onGuardado }) {
                   </div>
                   <div className="form-group">
                     <label>Fecha de nacimiento</label>
-                    <input type="date" value={nino.fechaNacimiento} onChange={(e) => handleNino(nino.id, 'fechaNacimiento', e.target.value)} required disabled={loading} />
+                    {/* Mismo rango 0–6 años que al registrar: corregir un typo
+                        no debe ser una puerta para saltarse la validación.
+                        Excepción: si la fecha YA guardada está fuera de rango
+                        (inscripción anterior a HF-1), no se limita el input —
+                        si no, el navegador bloquearía todo el formulario. */}
+                    {(() => {
+                      const heredadaFueraDeRango = !fechaDentroDeRango(
+                        familia.ninos.find((n) => n.id === nino.id)?.fechaNacimiento?.split('T')[0],
+                      );
+                      return (
+                        <>
+                          <input
+                            type="date"
+                            value={nino.fechaNacimiento}
+                            onChange={(e) => handleNino(nino.id, 'fechaNacimiento', e.target.value)}
+                            min={heredadaFueraDeRango ? undefined : rangoEdad.min}
+                            max={heredadaFueraDeRango ? undefined : rangoEdad.max}
+                            required
+                            disabled={loading}
+                          />
+                          {heredadaFueraDeRango && (
+                            <small style={{ color: 'var(--color-danger)', fontSize: '0.78rem' }}>
+                              Fuera del rango 0–6 años (inscripción antigua). Si la
+                              corriges, debe quedar dentro del rango.
+                            </small>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="form-group">
                     {/* Baja suave: no borra el historial (LOPDP); inactivo no puede reservar */}

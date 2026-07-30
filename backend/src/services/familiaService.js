@@ -16,6 +16,10 @@ class ValidacionError extends Error {}
 const CANALES = ['REDES', 'PEDIATRA_ALIADO', 'EMPRESA', 'REFERIDO'];
 const PARENTESCOS = ['padre', 'madre', 'abuelo', 'abuela', 'otro'];
 
+// HF-1: el centro atiende estimulación temprana de 0 a 6 años.
+// La elegibilidad termina en el 7º cumpleaños (un niño de 6 años SÍ entra).
+const EDAD_MAXIMA_ANIOS = 7;
+
 // Validaciones compartidas con usuarioService (mismo criterio en cuentas e inscripciones)
 const { motivoCorreoInvalido, esCedulaEcuatorianaValida } = require('./validaciones');
 // Mock Dátil compartido con pagoService (contratar paquete con pago opcional)
@@ -24,6 +28,37 @@ const { emitirComprobanteDatil } = require('./pagoService');
 // Comparación de nombres sin mayúsculas ni tildes ("Emilia" ≈ "emilía")
 const normalizarNombre = (n) =>
   (n || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+// Edad en años CUMPLIDOS a una fecha de referencia (no usa promedios de días:
+// resta calendario, para que el 6º cumpleaños caiga en el día exacto).
+function edadEnAnios(fechaNacimiento, hoy = new Date()) {
+  let anios = hoy.getFullYear() - fechaNacimiento.getFullYear();
+  const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+  if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) anios--;
+  return anios;
+}
+
+// HF-1: rango de edad 0–6 años. Compartido por registrarFamilia() y
+// actualizarNino() — si solo se validara al registrar, el rango se podría
+// evadir corrigiendo la fecha después (extensión CU-01).
+function validarFechaNacimiento(valor) {
+  if (isNaN(Date.parse(valor))) {
+    throw new ValidacionError('fechaNacimiento no es una fecha válida');
+  }
+  const nacimiento = new Date(valor);
+  const hoy = new Date();
+  if (nacimiento > hoy) {
+    throw new ValidacionError(
+      'La fecha de nacimiento no puede ser futura');
+  }
+  const edad = edadEnAnios(nacimiento, hoy);
+  if (edad >= EDAD_MAXIMA_ANIOS) {
+    throw new ValidacionError(
+      `El niño tiene ${edad} años. El centro atiende niños de 0 a 6 años `
+      + '(la inscripción es posible hasta el día antes de cumplir 7).');
+  }
+  return nacimiento;
+}
 
 // Regla: una familia no puede tener dos niños con el mismo nombre
 async function buscarHermanoHomonimo(clienteDb, familiaId, nombres, exceptoNinoId = null) {
@@ -55,9 +90,8 @@ function validarDatos({ nino, tutor, canalOrigen }) {
   if (!CANALES.includes(canalOrigen)) {
     throw new ValidacionError(`canalOrigen debe ser uno de: ${CANALES.join(', ')}`);
   }
-  if (isNaN(Date.parse(nino.fechaNacimiento))) {
-    throw new ValidacionError('fechaNacimiento no es una fecha válida');
-  }
+  // HF-1: fecha válida, no futura y dentro del rango 0–6 años
+  validarFechaNacimiento(nino.fechaNacimiento);
 }
 
 function crearFamiliaService(prisma) {
@@ -258,10 +292,9 @@ function crearFamiliaService(prisma) {
       data.nombres = datos.nombres.trim();
     }
     if (datos.fechaNacimiento !== undefined) {
-      if (isNaN(Date.parse(datos.fechaNacimiento))) {
-        throw new ValidacionError('fechaNacimiento no es una fecha válida');
-      }
-      data.fechaNacimiento = new Date(datos.fechaNacimiento);
+      // Mismo rango 0–6 años que al registrar (HF-1): corregir un typo no
+      // debe ser una puerta para saltarse la validación de edad.
+      data.fechaNacimiento = validarFechaNacimiento(datos.fechaNacimiento);
     }
     if (datos.observacionSalud !== undefined) data.observacionSalud = datos.observacionSalud || null;
     // Baja suave: inactivo conserva historial (LOPDP) pero no puede reservar
@@ -403,4 +436,8 @@ function crearFamiliaService(prisma) {
   };
 }
 
-module.exports = { crearFamiliaService, ValidacionError, CANALES };
+module.exports = {
+  crearFamiliaService, ValidacionError, CANALES,
+  // expuestos para las pruebas y para reusar el mismo rango en otras capas
+  edadEnAnios, EDAD_MAXIMA_ANIOS,
+};

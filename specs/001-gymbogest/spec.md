@@ -30,6 +30,14 @@ Como RECEPCION o TUTOR quiero registrar a un niño con su tutor y el canal de or
 - [ ] Campos obligatorios validados; correo y cédula con formato correcto.
 - [ ] El correo debe pertenecer a un proveedor conocido (gmail, hotmail, outlook, yahoo, icloud, proton) — mismo criterio que el sign up (RNF-01).
 - [ ] La cédula se valida con el algoritmo ecuatoriano (provincia 01–24, tercer dígito 0–5, dígito verificador módulo 10).
+- [ ] **Rango de edad del niño (0–6 años).** El centro atiende estimulación temprana de 0 a 6 años,
+      por lo que `fechaNacimiento` se valida así:
+  - [ ] Rechaza fechas **futuras** (un niño no puede nacer mañana) → 400.
+  - [ ] Rechaza niños que ya **cumplieron 7 años** → 400. Un niño de 6 años SÍ es elegible
+        (la edad válida es 0–6 años cumplidos; la elegibilidad termina en el 7º cumpleaños).
+  - [ ] La misma regla aplica al **corregir** la fecha en la extensión CU-01 (si no, el rango
+        se podría evadir editando después del registro).
+  - [ ] El mensaje de error indica la edad calculada y el rango permitido.
 
 #### Extensión CU-01 · Corregir datos de la inscripción (typos)
 Como RECEPCION o PROPIETARIA quiero corregir datos mal tipeados del tutor o del niño.

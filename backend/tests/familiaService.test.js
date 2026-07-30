@@ -446,3 +446,98 @@ describe('Extensión RF-03: ajuste manual del paquete (solo Propietaria)', () =>
       .rejects.toThrow(ValidacionError);
   });
 });
+
+// ============================================================
+// HF-1 · Rango de edad del niño (0–6 años)
+// Casos = criterios de aceptación añadidos a HF-1 en spec.md:
+//   - rechaza fechas futuras
+//   - un niño de 6 años SÍ es elegible; a los 7 cumplidos, NO
+//   - la misma regla aplica al corregir la fecha (extensión CU-01)
+// Fechas RELATIVAS a hoy: las pruebas no caducan con el paso del tiempo.
+// ============================================================
+describe('HF-1: rango de edad 0–6 años (fechaNacimiento)', () => {
+  // Fecha ISO desplazada respecto a hoy (años/días), en hora local
+  const fechaISO = ({ anios = 0, dias = 0 } = {}) => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - anios);
+    d.setDate(d.getDate() + dias);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  const registrarCon = (fechaNacimiento) => {
+    const { prisma, tx } = crearPrismaFalso();
+    const servicio = crearFamiliaService(prisma);
+    return {
+      tx,
+      promesa: servicio.registrarFamilia({
+        ...entradaValida,
+        nino: { ...entradaValida.nino, fechaNacimiento },
+      }),
+    };
+  };
+
+  test('acepta un recién nacido (0 años, hoy) — el rango empieza en 0', async () => {
+    const { promesa, tx } = registrarCon(fechaISO());
+    await expect(promesa).resolves.toBeDefined();
+    expect(tx.nino.create).toHaveBeenCalledTimes(1);
+  });
+
+  test('acepta un niño de 6 años (un día antes de cumplir 7) — límite superior', async () => {
+    const { promesa } = registrarCon(fechaISO({ anios: 7, dias: 1 }));
+    await expect(promesa).resolves.toBeDefined();
+  });
+
+  test('RECHAZA el día exacto del 7º cumpleaños (ya tiene 7 cumplidos)', async () => {
+    const { promesa, tx } = registrarCon(fechaISO({ anios: 7 }));
+    await expect(promesa).rejects.toThrow(ValidacionError);
+    await expect(promesa).rejects.toThrow(/0 a 6 años/);
+    expect(tx.nino.create).not.toHaveBeenCalled();
+  });
+
+  test('RECHAZA a un adulto (36 años) — caso real que la API aceptaba', async () => {
+    const { promesa } = registrarCon('1990-01-01');
+    await expect(promesa).rejects.toThrow(ValidacionError);
+  });
+
+  test('RECHAZA una fecha futura (un niño no puede nacer mañana)', async () => {
+    const { promesa, tx } = registrarCon(fechaISO({ dias: 1 }));
+    await expect(promesa).rejects.toThrow(/no puede ser futura/);
+    expect(tx.nino.create).not.toHaveBeenCalled();
+  });
+
+  test('RECHAZA una fecha no parseable', async () => {
+    const { promesa } = registrarCon('no-es-fecha');
+    await expect(promesa).rejects.toThrow(/no es una fecha válida/);
+  });
+
+  // Extensión CU-01: sin esto, el rango se evade corrigiendo la fecha después
+  describe('al CORREGIR la fecha (extensión CU-01)', () => {
+    const servicioConNino = () => {
+      const { prisma, tx } = crearPrismaFalso();
+      prisma.nino.findUnique.mockResolvedValue({ id: 20, familiaId: 7, nombres: 'Emma' });
+      return { servicio: crearFamiliaService(prisma), tx };
+    };
+
+    test('acepta corregir a una fecha dentro del rango', async () => {
+      const { servicio } = servicioConNino();
+      await expect(
+        servicio.actualizarNino(20, { fechaNacimiento: fechaISO({ anios: 4 }) }, { usuarioId: 2 }),
+      ).resolves.toBeDefined();
+    });
+
+    test('RECHAZA corregir a una edad de 7 años o más', async () => {
+      const { servicio, tx } = servicioConNino();
+      await expect(
+        servicio.actualizarNino(20, { fechaNacimiento: fechaISO({ anios: 8 }) }, { usuarioId: 2 }),
+      ).rejects.toThrow(/0 a 6 años/);
+      expect(tx.nino.update).not.toHaveBeenCalled();
+    });
+
+    test('RECHAZA corregir a una fecha futura', async () => {
+      const { servicio } = servicioConNino();
+      await expect(
+        servicio.actualizarNino(20, { fechaNacimiento: fechaISO({ dias: 30 }) }, { usuarioId: 2 }),
+      ).rejects.toThrow(/no puede ser futura/);
+    });
+  });
+});
